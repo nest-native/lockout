@@ -7,10 +7,10 @@
   <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/license-MIT-green.svg" alt="Package License" /></a>
 </p>
 
-> [!WARNING]
-> **Pre-release scaffold (`0.0.0`).** The repository foundation is in place; the
-> module, guard, and service are not implemented yet. The API below is the
-> planned contract.
+> [!NOTE]
+> **Unreleased (`0.0.0`).** The module, guard, and service are implemented and
+> tested; the package has not been published to npm yet. The first release will
+> be `0.1.0`.
 
 ## Honest by design: NestJS has no login-failure signal
 
@@ -29,6 +29,77 @@ bus**, so this adapter *cannot* be. It gives you explicit wiring instead:
 
 All of it builds on stable Nest primitives (`CanActivate`, `DynamicModule`,
 `HttpException`), so the package supports **NestJS 10, 11, and 12**.
+
+## Usage
+
+Install the adapter and the core (the core carries the stores and policy types):
+
+```bash
+npm install @nest-native/lockout @authlock/core
+```
+
+Register the module once:
+
+```ts
+import { Module } from '@nestjs/common';
+import { LockoutModule } from '@nest-native/lockout';
+import { InMemoryLockoutStore } from '@authlock/core';
+
+@Module({
+  imports: [
+    LockoutModule.forRoot({
+      store: new InMemoryLockoutStore(), // swap for a Drizzle store in production
+      limit: 5,
+      cooloffMs: 15 * 60_000,
+      parameters: [['username'], ['ip']],
+      // failMode: 'closed', // deny on store errors (default is 'open')
+    }),
+  ],
+})
+export class AppModule {}
+```
+
+Guard the login route (place `LockoutGuard` **before** your auth guard) and
+report the outcome from the handler — NestJS won't tell the engine about
+failures, so you make the two calls yourself:
+
+```ts
+import { Controller, Post, Body, Req, UseGuards } from '@nestjs/common';
+import { LockoutGuard, LockoutService } from '@nest-native/lockout';
+
+@Controller('auth')
+export class AuthController {
+  constructor(private readonly lockout: LockoutService) {}
+
+  @Post('login')
+  @UseGuards(LockoutGuard) // 429 + Retry-After if already locked
+  async login(@Body() dto: { username: string }, @Req() req: Request) {
+    const identity = { username: dto.username, ip: req.ip };
+    const user = await this.verify(dto); // your credential check
+    if (!user) {
+      await this.lockout.reportFailure(identity); // count the failure
+      throw new UnauthorizedException();
+    }
+    await this.lockout.reportSuccess(identity); // reset on success
+    return this.issueSession(user);
+  }
+}
+```
+
+### Passport recipe
+
+With `passport-local` the failure happens inside the strategy, so report it
+there (or in the controller after `AuthGuard` throws). Put `LockoutGuard` first
+so a locked identity is rejected before Passport runs:
+
+```ts
+@UseGuards(LockoutGuard, AuthGuard('local'))
+@Post('login')
+login(@Req() req) {
+  // AuthGuard populated req.user; report success here, and report failure from
+  // LocalStrategy.validate() (or a catch around AuthGuard) where the check fails.
+}
+```
 
 ## Relationship to `@authlock/core`
 
