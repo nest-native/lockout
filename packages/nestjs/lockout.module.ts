@@ -39,7 +39,7 @@ export class LockoutModule {
       module: LockoutModule,
       global: options.isGlobal ?? true,
       providers,
-      exports: [LockoutService, LockoutGuard, LOCKOUT_MANAGER],
+      exports: [LockoutService, LockoutGuard, LOCKOUT_MANAGER, LOCKOUT_OPTIONS],
     };
   }
 
@@ -64,7 +64,7 @@ export class LockoutModule {
       global: options.isGlobal ?? true,
       imports: options.imports ?? [],
       providers,
-      exports: [LockoutService, LockoutGuard, LOCKOUT_MANAGER],
+      exports: [LockoutService, LockoutGuard, LOCKOUT_MANAGER, LOCKOUT_OPTIONS],
     };
   }
 }

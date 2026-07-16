@@ -2,6 +2,7 @@ import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
 import { InMemoryLockoutStore } from '@authlock/core';
+import { Controller, Get, UseGuards } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 
 import {
@@ -50,6 +51,29 @@ describe('LockoutModule.forRoot', () => {
     assert.ok(moduleRef.get(LOCKOUT_MANAGER));
 
     await moduleRef.close();
+  });
+
+  it('resolves LockoutGuard used via @UseGuards from a consuming module', async () => {
+    // Regression: the guard depends on the options token, so that token must be
+    // EXPORTED — otherwise instantiating the guard for a controller in another
+    // module fails DI at bootstrap ("… is available in the AppModule module").
+    @Controller('protected')
+    class ProtectedController {
+      @Get()
+      @UseGuards(LockoutGuard)
+      handler(): string {
+        return 'ok';
+      }
+    }
+
+    const moduleRef = await Test.createTestingModule({
+      imports: [LockoutModule.forRoot(baseOptions())],
+      controllers: [ProtectedController],
+    }).compile();
+
+    const app = moduleRef.createNestApplication();
+    await app.init(); // throws here if the guard's deps don't resolve
+    await app.close();
   });
 });
 
