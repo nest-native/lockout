@@ -1,0 +1,70 @@
+{
+  "name": "@nest-native/lockout",
+  "version": "0.0.0",
+  "description": "Thin NestJS adapter over @authlock/core — a LockoutGuard, LockoutService, and DynamicModule for django-axes-style login lockout in NestJS apps",
+  "keywords": [
+    "nestjs",
+    "login",
+    "lockout",
+    "brute-force",
+    "authentication",
+    "security",
+    "guard",
+    "passport",
+    "authlock",
+    "typescript"
+  ],
+  "author": "Rodrigo Nogueira",
+  "license": "MIT",
+  "homepage": "https://github.com/nest-native/lockout#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nest-native/lockout.git",
+    "directory": "packages/nestjs"
+  },
+  "bugs": {
+    "url": "https://github.com/nest-native/lockout/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.d.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@authlock/core": "0.0.0"
+  },
+  "peerDependencies": {
+    "@nestjs/common": "^10.0.0 || ^11.0.0 || ^12.0.0",
+    "@nestjs/core": "^10.0.0 || ^11.0.0 || ^12.0.0",
+    "reflect-metadata": "^0.1.12 || ^0.2.0",
+    "rxjs": "^7.0.0"
+  },
+  "devDependencies": {
+    "@nestjs/common": "^11.1.27",
+    "@nestjs/core": "^11.1.27",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.1",
+    "typescript": "^6.0.3"
+  }
+}

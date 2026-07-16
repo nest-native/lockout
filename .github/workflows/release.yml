@@ -1,0 +1,43 @@
+name: Release
+
+# Publishes on a `vX.Y.Z` tag. Both packages are published from the same tag,
+# core first (the adapter depends on it). If independent per-package versioning
+# is adopted later, split this into tag-prefixed workflows
+# (`authlock-core-v*` / `nest-native-lockout-v*`).
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    name: Publish to npm
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build core (@authlock/core)
+        run: npm run build --workspace @authlock/core
+
+      - name: Publish core to npm (with provenance)
+        run: npm publish --workspace @authlock/core --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Build adapter (@nest-native/lockout)
+        run: npm run build --workspace @nest-native/lockout
+
+      - name: Publish adapter to npm (with provenance)
+        run: npm publish --workspace @nest-native/lockout --provenance --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" viewBox="0 0 200 200" role="img" aria-label="authlock">
+  <rect width="200" height="200" rx="24" fill="#0f766e"/>
+  <path d="M70 92V74a30 30 0 0 1 60 0v18" fill="none" stroke="#ffffff" stroke-width="12" stroke-linecap="round"/>
+  <rect x="54" y="92" width="92" height="70" rx="12" fill="#ffffff"/>
+  <circle cx="100" cy="120" r="10" fill="#0f766e"/>
+  <rect x="95" y="126" width="10" height="22" rx="5" fill="#0f766e"/>
+</svg>

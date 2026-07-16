@@ -1,0 +1,67 @@
+{
+  "name": "@authlock/core",
+  "version": "0.0.0",
+  "description": "Framework-agnostic, django-axes-style login lockout engine — persistent failed-attempt tracking, failure limits, tiered cooloff, and a pluggable store (in-memory + Drizzle)",
+  "keywords": [
+    "login",
+    "lockout",
+    "brute-force",
+    "rate-limit",
+    "authentication",
+    "security",
+    "failed-login",
+    "django-axes",
+    "account-lockout",
+    "drizzle",
+    "typescript"
+  ],
+  "author": "Rodrigo Nogueira",
+  "license": "MIT",
+  "homepage": "https://github.com/nest-native/lockout#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nest-native/lockout.git",
+    "directory": "packages/core"
+  },
+  "bugs": {
+    "url": "https://github.com/nest-native/lockout/issues"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "require": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist/**/*.d.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "clean": "rimraf dist tsconfig.tsbuildinfo",
+    "build": "npm run clean && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {},
+  "peerDependencies": {
+    "drizzle-orm": "^0.44.0 || ^0.45.0"
+  },
+  "peerDependenciesMeta": {
+    "drizzle-orm": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3"
+  }
+}

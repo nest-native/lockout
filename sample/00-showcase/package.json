@@ -1,0 +1,19 @@
+{
+  "name": "authlock-core-showcase",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Framework-free showcase for @authlock/core: it links the zero-dependency core across the workspace and (as the engine lands) demonstrates the failure-count -> lockout -> cooloff -> reset flow",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "smoke": "ts-node --transpile-only scripts/smoke.ts",
+    "test": "npm run typecheck && npm run smoke"
+  },
+  "dependencies": {
+    "@authlock/core": "0.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.3"
+  }
+}
