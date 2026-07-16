@@ -146,10 +146,17 @@ because the neutral core is the whole cross-framework story.
   core version, bump the adapter's `@authlock/core` dependency and every
   `sample/*/package.json` `@authlock/core` pin to the exact version, run
   `npm install`, and `npm run release:check`.
-- Publish via a `vX.Y.Z` tag → `release.yml` (provenance + the `NPM_TOKEN`
-  secret); the workflow publishes the core first, then the adapter. If
-  independent per-package cadence is adopted later, split into tag-prefixed
-  workflows.
+- Publish via a `vX.Y.Z` tag → `release.yml`, using npm **Trusted Publishing
+  (OIDC)** — NO long-lived `NPM_TOKEN`. The workflow's `id-token: write`
+  permission lets the npm CLI mint a short-lived, workflow-scoped credential and
+  attach provenance automatically; this sidesteps npm's restriction on tokens
+  that bypass 2FA (account changes Aug 2026, direct publishing Jan 2027). Each
+  package needs a **Trusted Publisher** configured on npmjs.com (repo
+  `nest-native/lockout`, workflow `release.yml`) before its first OIDC release;
+  a brand-new package may need one manual 2FA publish (or a pre-registered
+  trusted publisher) to bootstrap. The workflow publishes the core first, then
+  the adapter. If independent per-package cadence is adopted later, split into
+  tag-prefixed workflows.
 - **Governance transition:** during the initial dogfood the repo is local-first
   (direct commits to `main`, no branch protection). After the first `v0.1.0`
   dogfood release, switch `main` to branch-protection + PR-only, matching the
