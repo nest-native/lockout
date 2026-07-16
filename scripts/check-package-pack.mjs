@@ -32,6 +32,12 @@ try {
     'package.json',
     'dist/index.js',
     'dist/index.d.ts',
+    // The Drizzle store subpath entrypoints must ship (see package.json exports).
+    'dist/dialects/index.js',
+    'dist/dialects/index.d.ts',
+    'dist/dialects/postgres/index.js',
+    'dist/dialects/sqlite/index.js',
+    'dist/dialects/mysql/index.js',
   ];
   const missingFiles = requiredFiles.filter(filePath => !filePaths.includes(filePath));
 

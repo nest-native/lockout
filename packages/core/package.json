@@ -34,6 +34,26 @@
       "require": "./dist/index.js",
       "default": "./dist/index.js"
     },
+    "./drizzle": {
+      "types": "./dist/dialects/index.d.ts",
+      "require": "./dist/dialects/index.js",
+      "default": "./dist/dialects/index.js"
+    },
+    "./postgres": {
+      "types": "./dist/dialects/postgres/index.d.ts",
+      "require": "./dist/dialects/postgres/index.js",
+      "default": "./dist/dialects/postgres/index.js"
+    },
+    "./sqlite": {
+      "types": "./dist/dialects/sqlite/index.d.ts",
+      "require": "./dist/dialects/sqlite/index.js",
+      "default": "./dist/dialects/sqlite/index.js"
+    },
+    "./mysql": {
+      "types": "./dist/dialects/mysql/index.d.ts",
+      "require": "./dist/dialects/mysql/index.js",
+      "default": "./dist/dialects/mysql/index.js"
+    },
     "./package.json": "./package.json"
   },
   "files": [

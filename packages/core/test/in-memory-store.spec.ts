@@ -2,6 +2,11 @@ import { strict as assert } from 'node:assert';
 import { describe, it } from 'node:test';
 
 import { InMemoryLockoutStore } from '../store/in-memory';
+import { runStoreContract } from './support/store-contract';
+
+// The in-memory store must satisfy the exact same behavioral contract as the
+// Drizzle stores.
+runStoreContract('in-memory', () => ({ store: new InMemoryLockoutStore() }));
 
 describe('InMemoryLockoutStore', () => {
   it('creates a record on the first increment', () => {
