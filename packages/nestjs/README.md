@@ -8,9 +8,8 @@
 </p>
 
 > [!NOTE]
-> **Unreleased (`0.0.0`).** The module, guard, and service are implemented and
-> tested; the package has not been published to npm yet. The first release will
-> be `0.1.0`.
+> Published on npm and following semver. Version history is in the
+> [changelog](https://github.com/nest-native/lockout/blob/main/CHANGELOG.md).
 
 ## Honest by design: NestJS has no login-failure signal
 

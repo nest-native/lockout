@@ -9,9 +9,8 @@
 </p>
 
 > [!NOTE]
-> **Unreleased (`0.0.0`).** The engine and all stores are implemented and fully
-> tested (100% coverage, plus real Postgres/MySQL round-trips), but the package
-> has not been published to npm yet. The first release will be `0.1.0`.
+> Published on npm and following semver. Version history is in the
+> [changelog](https://github.com/nest-native/lockout/blob/main/CHANGELOG.md).
 
 ## What it is
 
