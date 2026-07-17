@@ -18,7 +18,7 @@ const FeatureList: FeatureItem[] = [
         Persistent failed-attempt tracking keyed on username, IP, combinations,
         or <code>+user_agent</code>. Trip a failure limit and the identity is
         locked out for a cooloff — including <strong>tiered</strong> cooloff that
-        grows with each lockout.
+        escalates as failures accumulate.
       </>
     ),
   },
