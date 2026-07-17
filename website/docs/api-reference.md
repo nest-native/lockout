@@ -11,7 +11,7 @@ title: API Reference
 
 | Export | Kind | Purpose |
 | --- | --- | --- |
-| `LockoutManager` | class | `check()` (read-only pre-auth gate), `recordFailure()`, `recordSuccess()`, `pruneExpired()`; multi-key evaluation + `onLockout` hook |
+| `LockoutManager` | class | `check()` (read-only pre-auth gate), `recordFailure()`, `recordSuccess()`, `reset()` (administrative unlock), `pruneExpired()`; multi-key evaluation + `onLockout` hook |
 | `InMemoryLockoutStore` | class | single-instance store, ships in the box |
 | `deriveKeys` | function | resolve an identity to its storage keys (sha256 of the dimension/value pairs — raw values never reach a store) |
 | `cooloffFor` / `effectiveWindowMs` / `evaluateRecord` | functions | the pure policy maths, exported for custom stores and tooling |
@@ -70,12 +70,12 @@ no Drizzle at all and stays zero-dependency.
 | --- | --- | --- |
 | `LockoutModule` | dynamic module | `forRoot(options)` / `forRootAsync({useFactory, inject, imports})`; global by default |
 | `LockoutGuard` | `CanActivate` | reject-if-locked, applied **before** authentication — HTTP 429 + `Retry-After` (Express and Fastify responses) |
-| `LockoutService` | provider | `check()` / `reportFailure()` / `reportSuccess()` — the explicit call site for your login handler |
+| `LockoutService` | provider | `check()` / `reportFailure()` / `reportSuccess()` / `reset()` — the explicit call site for your login handler and admin unlock |
 | `defaultExtractor` | function | `username` from the body, `ip` from `req.ip`, `userAgent` from the header — deliberately no `X-Forwarded-For` trust |
 | `LOCKOUT_MANAGER` / `LOCKOUT_OPTIONS` | tokens | `Symbol.for` DI tokens (the manager is injectable directly) |
 | `LockoutModuleOptions` | type | everything `LockoutManagerOptions` takes, plus `extractor` and `isGlobal` |
 | `IdentifierExtractor` | type | `(context: ExecutionContext) => Identifiers` |
-| `VERSION` / `CORE_VERSION` | const | adapter + linked core versions |
+| `VERSION` | const | the adapter version |
 
 The adapter builds only on stable Nest primitives (`CanActivate`,
 `DynamicModule`, `HttpException`, `ExecutionContext`) and supports NestJS

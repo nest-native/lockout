@@ -145,6 +145,70 @@ describe('LockoutManager — reset on success', () => {
   });
 });
 
+describe('LockoutManager — reset (administrative unlock)', () => {
+  it('unlocks unconditionally, even when resetOnSuccess is disabled', async () => {
+    const manager = new LockoutManager({
+      store: new InMemoryLockoutStore(),
+      limit: 2,
+      cooloffMs: 1000,
+      parameters: [['username']],
+      resetOnSuccess: false, // recordSuccess would NOT clear; reset must
+    });
+    await manager.recordFailure(alice);
+    assert.equal((await manager.recordFailure(alice)).locked, true);
+
+    await manager.reset(alice);
+    assert.equal((await manager.check(alice)).locked, false);
+    // A fresh window — it takes the full limit again to re-lock.
+    assert.equal((await manager.recordFailure(alice)).locked, false);
+    assert.equal((await manager.recordFailure(alice)).locked, true);
+  });
+
+  it('does not short-circuit on the whitelist and swallows store errors', async () => {
+    const logged: string[] = [];
+    const manager = new LockoutManager({
+      store: new ThrowingStore(),
+      limit: 2,
+      cooloffMs: 1000,
+      parameters: [['username']],
+      whitelist: () => true,
+      logger: (_e, ctx) => logged.push(ctx),
+    });
+    await manager.reset(alice); // must not throw despite the whitelist + store error
+    assert.ok(logged.includes('store.clear'));
+  });
+});
+
+describe('LockoutManager — configuration validation', () => {
+  const store = new InMemoryLockoutStore();
+
+  it('throws when limit is below 1', () => {
+    assert.throws(
+      () =>
+        new LockoutManager({
+          store,
+          limit: 0,
+          cooloffMs: 1000,
+          parameters: [['username']],
+        }),
+      /limit/,
+    );
+  });
+
+  it('throws when cooloffMs is not positive', () => {
+    assert.throws(
+      () =>
+        new LockoutManager({
+          store,
+          limit: 2,
+          cooloffMs: 0,
+          parameters: [['username']],
+        }),
+      /cooloffMs/,
+    );
+  });
+});
+
 describe('LockoutManager — multi-key evaluation', () => {
   it('locks when ANY configured parameter trips, tagging the tripped parameter', async () => {
     const manager = new LockoutManager({

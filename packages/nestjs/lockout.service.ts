@@ -37,4 +37,13 @@ export class LockoutService {
   reportSuccess(identity: Identifiers): Promise<void> {
     return this.manager.recordSuccess(identity);
   }
+
+  /**
+   * Administratively unlock an identity — clears its counters unconditionally
+   * (ignores `resetOnSuccess` and the whitelist). Use this for an admin "unlock
+   * user" action, not for a normal login outcome.
+   */
+  reset(identity: Identifiers): Promise<void> {
+    return this.manager.reset(identity);
+  }
 }

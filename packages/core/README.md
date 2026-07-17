@@ -70,6 +70,32 @@ if (await verifyPassword(username, password)) {
 and `recordSuccess` are the two writes, called with the authentication outcome.
 There is no ambient magic — you wire these three calls into your own handler.
 
+## Unlocking an identity
+
+`recordSuccess` clears the counters on a *successful login*. For an
+administrative unlock — a support tool, an "unlock user" button, an
+unlock-via-email link — use `reset`, which clears the counters unconditionally
+(it ignores `resetOnSuccess` and the whitelist):
+
+```ts
+await lockout.reset({ username, ip }); // administratively unlock
+```
+
+## Locking by username is a denial-of-service vector
+
+This is inherent to identity-based lockout (django-axes has the same property):
+if you lock on `['username']`, **anyone can lock a victim out of their own
+account** just by submitting failed logins for that username. Mitigate it:
+
+- Prefer **combination** parameters (`['username', 'ip']`) over `['username']`
+  alone, so an attacker must also control the victim's IP.
+- Keep a separate, looser `['ip']` parameter to catch distributed guessing.
+- Consider a softer response for the username dimension (a CAPTCHA or a delay)
+  and reserve a hard lock for the IP dimension.
+
+The library locks exactly what you configure — choosing safe `parameters` is
+your decision.
+
 ## A shared, durable store
 
 The in-memory store is single-process. For multiple instances (or to survive a

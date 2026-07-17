@@ -1,6 +1,6 @@
 {
   "name": "@authlock/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Framework-agnostic, django-axes-style login lockout engine — persistent failed-attempt tracking, failure limits, tiered cooloff, and a pluggable store (in-memory + Drizzle)",
   "keywords": [
     "login",

@@ -7,10 +7,34 @@ This project follows semantic versioning for the published packages. Sample,
 documentation, and CI-only changes may remain unreleased until the next package
 release is useful for users.
 
-## Unreleased
+## 0.2.0
 
-The first published release will be `0.1.0` (both packages). Everything below is
-implemented and tested but not yet on npm.
+Completeness + safety follow-up after a design review of 0.1.0.
+
+### `@authlock/core`
+
+- **Added `LockoutManager.reset(identifiers)`** — administratively unlock an
+  identity by clearing its counters unconditionally (ignores `resetOnSuccess`
+  and the whitelist). `recordSuccess` remains the "a login succeeded" call; this
+  is the "an admin unlocked this user" call, which the API previously lacked.
+- **Config validation** — the constructor now throws when `limit < 1` or
+  `cooloffMs <= 0`, instead of silently accepting a configuration that would
+  disable the lockout entirely. A security control that quietly does nothing is
+  worse than a startup error.
+- Docs: a prominent warning that locking by `['username']` alone is a
+  denial-of-service vector (an attacker can lock a victim out by name) with
+  mitigations, and how to unlock an identity.
+
+### `@nest-native/lockout`
+
+- **Added `LockoutService.reset(identifiers)`** — the adapter pass-through for
+  the administrative unlock above.
+- Docs: fixed the API reference (the adapter exports `VERSION`, not the
+  previously-documented `CORE_VERSION`); documented `reset`.
+
+## 0.1.0
+
+The first published release (both packages).
 
 ### `@authlock/core`
 

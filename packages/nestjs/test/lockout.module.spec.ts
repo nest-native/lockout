@@ -42,6 +42,24 @@ describe('LockoutModule.forRoot', () => {
     await moduleRef.close();
   });
 
+  it('reset() administratively unlocks even with resetOnSuccess disabled', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        LockoutModule.forRoot({ ...baseOptions(), resetOnSuccess: false }),
+      ],
+    }).compile();
+
+    const service = moduleRef.get(LockoutService);
+    const identity = { username: 'carol' };
+    await service.reportFailure(identity);
+    assert.equal((await service.reportFailure(identity)).locked, true);
+
+    await service.reset(identity);
+    assert.equal((await service.check(identity)).locked, false);
+
+    await moduleRef.close();
+  });
+
   it('exposes the guard and the manager token', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [LockoutModule.forRoot(baseOptions())],
