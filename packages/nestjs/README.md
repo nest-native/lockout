@@ -21,6 +21,7 @@ bus**, so this adapter *cannot* be. It gives you explicit wiring instead:
 - **`LockoutGuard`** — applied **before** your authentication guard, it rejects
   a request whose identity is currently locked (HTTP 429 + `Retry-After`).
 - **`LockoutService`** — you call `reportFailure(...)` / `reportSuccess(...)`
+  (and `reset(...)` for an administrative unlock)
   from your own login handler (or a Passport strategy) so the engine can count
   failures and reset on success. A documented Passport recipe ships with it.
 - **`LockoutModule.forRoot(...)` / `forRootAsync(...)`** — configure the

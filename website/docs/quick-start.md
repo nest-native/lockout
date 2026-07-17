@@ -68,6 +68,28 @@ const lockout = new LockoutManager({
 });
 ```
 
+:::warning Locking by username is a DoS vector
+Inherent to identity-based lockout (django-axes has it too): if you lock on
+`['username']`, **anyone can lock a victim out of their own account** by
+submitting failed logins for that username. Prefer a **combination**
+(`['username', 'ip']`) so an attacker must also control the victim's IP, keep a
+looser `['ip']` parameter for distributed guessing, and consider a softer
+response (CAPTCHA/delay) for the username dimension. The library locks exactly
+what you configure — choosing safe `parameters` is your call.
+:::
+
+## Unlocking an identity
+
+`recordSuccess` clears the counters on a successful login. For an
+administrative unlock — a support tool, an "unlock user" button, an
+unlock-via-email link — call `reset`, which clears unconditionally (it ignores
+`resetOnSuccess` and the whitelist):
+
+```ts
+await lockout.reset({username, ip}); // core
+// or, in NestJS: await this.lockout.reset({username, ip});
+```
+
 ## A shared, durable store
 
 The in-memory store is single-process. For multiple instances (or to survive a

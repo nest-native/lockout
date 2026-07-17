@@ -76,6 +76,16 @@ export class LockoutManager {
   private readonly now: () => number;
 
   constructor(options: LockoutManagerOptions) {
+    // Fail loud on configuration that would silently DISABLE the control: a
+    // non-positive `cooloffMs` never locks, and a `limit` below 1 is nonsense.
+    // A misconfigured security control that quietly does nothing is worse than
+    // a crash at startup.
+    if (!(options.limit >= 1)) {
+      throw new TypeError('LockoutManager: `limit` must be at least 1.');
+    }
+    if (!(options.cooloffMs > 0)) {
+      throw new TypeError('LockoutManager: `cooloffMs` must be greater than 0.');
+    }
     this.store = options.store;
     this.parameters = options.parameters;
     this.limit = options.limit;
@@ -146,6 +156,20 @@ export class LockoutManager {
     if (await this.isWhitelisted(id)) {
       return;
     }
+    await this.clearKeys(id);
+  }
+
+  /**
+   * Administratively unlock an identity — clear every configured key for it,
+   * UNCONDITIONALLY. Unlike {@link recordSuccess}, this ignores `resetOnSuccess`
+   * and the whitelist: it is the deliberate "unlock this user" action for an
+   * admin panel, a support tool, or an unlock-via-email link.
+   */
+  async reset(id: Identifiers): Promise<void> {
+    await this.clearKeys(id);
+  }
+
+  private async clearKeys(id: Identifiers): Promise<void> {
     for (const { key } of deriveKeys(id, this.parameters)) {
       try {
         await this.store.clear(key);
