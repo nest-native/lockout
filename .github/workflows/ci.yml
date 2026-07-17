@@ -61,6 +61,11 @@ jobs:
       - name: Run core tests with coverage
         run: npm run test:cov
 
+      # The adapter tests import `@authlock/core` by package name, which
+      # resolves to packages/core/dist — build it first.
+      - name: Build core (@authlock/core)
+        run: npm run build --workspace @authlock/core
+
       - name: Run adapter tests
         run: npm run test:nestjs
 
@@ -100,6 +105,11 @@ jobs:
           START=$SECONDS
           npm run test:cov
           echo $(( (SECONDS - START) * 1000 )) > test-step-duration-ms.txt
+
+      # The adapter tests import `@authlock/core` by package name, which
+      # resolves to packages/core/dist — build it first.
+      - name: Build core (@authlock/core)
+        run: npm run build --workspace @authlock/core
 
       - name: Run adapter tests
         run: npm run test:nestjs
@@ -349,6 +359,11 @@ jobs:
 
       - name: Build core (@authlock/core)
         run: npm run build --workspace @authlock/core
+
+      # The NestJS sample imports `@nest-native/lockout` by package name, which
+      # resolves to packages/nestjs/dist — build the adapter too.
+      - name: Build adapter (@nest-native/lockout)
+        run: npm run build --workspace @nest-native/lockout
 
       - name: Run sample matrix
         run: |
