@@ -44,12 +44,28 @@ jobs:
         run: npm run build --workspace @authlock/core
 
       # No NODE_AUTH_TOKEN — the npm CLI uses the OIDC id-token from the trusted
-      # publisher and adds provenance automatically.
+      # publisher; `--provenance` is passed explicitly (the "automatic"
+      # provenance has been reported not to kick in without it). Each publish is
+      # idempotent: if the version is already on the registry (the manual 0.1.0
+      # bootstrap, or a re-run after a partial failure), it is skipped so the
+      # run stays green instead of failing on a publish-over conflict.
       - name: Publish core to npm (OIDC + provenance)
-        run: npm publish --workspace @authlock/core --access public
+        run: |
+          VERSION="$(node -p "require('./packages/core/package.json').version")"
+          if npm view "@authlock/core@${VERSION}" version >/dev/null 2>&1; then
+            echo "@authlock/core@${VERSION} is already on the registry — skipping."
+          else
+            npm publish --workspace @authlock/core --provenance --access public
+          fi
 
       - name: Build adapter (@nest-native/lockout)
         run: npm run build --workspace @nest-native/lockout
 
       - name: Publish adapter to npm (OIDC + provenance)
-        run: npm publish --workspace @nest-native/lockout --access public
+        run: |
+          VERSION="$(node -p "require('./packages/nestjs/package.json').version")"
+          if npm view "@nest-native/lockout@${VERSION}" version >/dev/null 2>&1; then
+            echo "@nest-native/lockout@${VERSION} is already on the registry — skipping."
+          else
+            npm publish --workspace @nest-native/lockout --provenance --access public
+          fi
