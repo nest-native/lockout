@@ -7,6 +7,21 @@ This project follows semantic versioning for the published packages. Sample,
 documentation, and CI-only changes may remain unreleased until the next package
 release is useful for users.
 
+## 0.3.1
+
+`@nest-native/lockout` only (`@authlock/core` unchanged at 0.3.0).
+
+- **`LockoutModule.forRootAsync` `useFactory` is now typed `(...args: any[])`**,
+  matching NestJS's own `FactoryProvider.useFactory`. Previously it was
+  `(...args: unknown[])`, so a factory declared with a **typed** injected
+  parameter — the common case, e.g. `(db: MyDatabase) => ({ store: ... })` fed by
+  `inject` — did not assign under `strictFunctionTypes` and forced callers to
+  widen to `unknown` and re-narrow. Surfaced while integrating the adapter into a
+  real app. No runtime change.
+- Docs: a note that on non-HTTP transports (tRPC, GraphQL, WebSocket) you use
+  `LockoutService` in your handler rather than `LockoutGuard`, since the guard's
+  default extractor assumes the credential is in the HTTP request body.
+
 ## 0.3.0
 
 A security-hardening release from a design review + an adversarial audit against
