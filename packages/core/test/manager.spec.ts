@@ -87,12 +87,19 @@ describe('LockoutManager — basic lifecycle', () => {
 
     assert.equal(locks.length, 1); // fired once, on the transition
 
-    // A further failure stays locked, counts down retry-after, and does NOT
-    // re-fire onLockout.
+    // A read-only check counts the retry-after DOWN as time passes (the cooloff
+    // is anchored to the last failure, which hasn't moved).
     c.advance(100);
+    assert.equal((await manager.check(alice)).retryAfterMs, 900);
+
+    // A further FAILED attempt re-anchors the cooloff (the attacker stays
+    // locked, not a free guess). Here there are no tiers so windowMs == cooloff,
+    // meaning the window (from the first failure) caps retry-after at 900 — the
+    // re-anchor cannot extend the lock past the window. It does NOT re-fire
+    // onLockout (not a tier escalation).
     const fourth = await manager.recordFailure(alice);
     assert.equal(fourth.locked, true);
-    assert.equal(fourth.retryAfterMs, 900);
+    assert.equal(fourth.retryAfterMs, 900); // capped by firstFailureAt + windowMs
     assert.equal(locks.length, 1);
   });
 
@@ -207,6 +214,68 @@ describe('LockoutManager — configuration validation', () => {
       /cooloffMs/,
     );
   });
+
+  const withTiers = (tiers: unknown[]) =>
+    new LockoutManager({
+      store,
+      limit: 2,
+      cooloffMs: 1000,
+      parameters: [['username']],
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      tiers: tiers as any,
+    });
+
+  it('rejects a non-integer or non-positive tier atFailures', () => {
+    assert.throws(() => withTiers([{ atFailures: 5.5, cooloffMs: 2000 }]), /atFailures/);
+    assert.throws(() => withTiers([{ atFailures: 0, cooloffMs: 2000 }]), /atFailures/);
+    assert.throws(() => withTiers([{ atFailures: NaN, cooloffMs: 2000 }]), /atFailures/);
+  });
+
+  it('rejects a non-finite or non-positive tier cooloffMs', () => {
+    assert.throws(() => withTiers([{ atFailures: 5, cooloffMs: 0 }]), /cooloffMs/);
+    assert.throws(() => withTiers([{ atFailures: 5, cooloffMs: NaN }]), /cooloffMs/);
+    assert.throws(
+      () => withTiers([{ atFailures: 5, cooloffMs: Infinity }]),
+      /cooloffMs/,
+    );
+  });
+
+  it('rejects duplicate tier atFailures', () => {
+    assert.throws(
+      () =>
+        withTiers([
+          { atFailures: 5, cooloffMs: 2000 },
+          { atFailures: 5, cooloffMs: 3000 },
+        ]),
+      /duplicate/,
+    );
+  });
+
+  it('rejects a NON-MONOTONIC cooloff (failing more must not lock for less)', () => {
+    // A higher-failure tier with a SHORTER cooloff would let an attacker
+    // self-unlock early by failing more. Reject it (relative to the base too).
+    assert.throws(
+      () => withTiers([{ atFailures: 6, cooloffMs: 500 }]), // < base 1000
+      /non-decreasing/,
+    );
+    assert.throws(
+      () =>
+        withTiers([
+          { atFailures: 6, cooloffMs: 5000 },
+          { atFailures: 12, cooloffMs: 2000 }, // < the 5000 tier below it
+        ]),
+      /non-decreasing/,
+    );
+  });
+
+  it('accepts a valid monotonic tier schedule', () => {
+    assert.doesNotThrow(() =>
+      withTiers([
+        { atFailures: 6, cooloffMs: 5000 },
+        { atFailures: 12, cooloffMs: 60000 },
+      ]),
+    );
+  });
 });
 
 describe('LockoutManager — multi-key evaluation', () => {
@@ -261,7 +330,7 @@ describe('LockoutManager — multi-key evaluation', () => {
     assert.deepEqual(trip.trippedParameter, ['username']);
   });
 
-  it('does not fire onLockout when the limit is reached but the cooloff already elapsed', async () => {
+  it('re-locks on every over-limit failure — no unthrottled gap between tiers', async () => {
     const c = clock(0);
     const fired: number[] = [];
     const manager = new LockoutManager({
@@ -269,17 +338,41 @@ describe('LockoutManager — multi-key evaluation', () => {
       limit: 2,
       cooloffMs: 100,
       // A high tier stretches the window to 10000 without changing the base
-      // cooloff, so a record can reach the limit yet already be past cooloff.
+      // cooloff — the exact config that used to leak free guesses between the
+      // base lock and the tier lock.
       tiers: [{ atFailures: 5, cooloffMs: 10000 }],
       parameters: [['username']],
       now: c.now,
       onLockout: () => fired.push(1),
     });
+
     await manager.recordFailure(alice); // t=0, failures=1
-    c.set(150); // within the 10000 window, but past the 100ms base cooloff
-    const second = await manager.recordFailure(alice); // failures=2 == limit
-    assert.equal(second.locked, false);
-    assert.equal(fired.length, 0);
+    c.set(50);
+    const locked = await manager.recordFailure(alice); // failures=2 == limit
+    assert.equal(locked.locked, true);
+    assert.equal(fired.length, 1); // onLockout on the initial lock
+
+    // Advance well past the 100ms base cooloff but within the 10000 window — the
+    // old gap zone. A check reports unlocked (cooloff from the last failure has
+    // elapsed) but the very next failed attempt RE-LOCKS: no free burst.
+    c.set(200);
+    assert.equal((await manager.check(alice)).locked, false);
+    const relock = await manager.recordFailure(alice); // failures=3
+    assert.equal(relock.locked, true);
+    assert.equal(relock.retryAfterMs, 100); // re-anchored to lastFailureAt(200)
+    assert.equal(fired.length, 1); // failures=3 is not a tier escalation
+
+    // Keep going one guess per cooloff until the tier engages.
+    c.set(400);
+    await manager.recordFailure(alice); // failures=4
+    c.set(600);
+    const tier = await manager.recordFailure(alice); // failures=5 → tier
+    assert.equal(tier.locked, true);
+    // Tier cooloff 10000 from lastFailureAt(600) would run to 10600, but the
+    // window (firstFailureAt 0 + windowMs 10000) caps it: retry-after 9400. This
+    // is the DoS bound — a run cannot keep a victim locked beyond windowMs.
+    assert.equal(tier.retryAfterMs, 9400);
+    assert.equal(fired.length, 2); // onLockout fires again on the escalation
   });
 });
 

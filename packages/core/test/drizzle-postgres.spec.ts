@@ -11,7 +11,8 @@ const table = pgLockoutTable();
 const DDL = `CREATE TABLE lockout_attempts (
   key text PRIMARY KEY,
   failures integer NOT NULL,
-  first_failure_at bigint NOT NULL
+  first_failure_at bigint NOT NULL,
+  last_failure_at bigint NOT NULL
 )`;
 
 runStoreContract('postgres (pglite)', async () => {

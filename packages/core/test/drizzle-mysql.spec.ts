@@ -53,11 +53,16 @@ const table = mysqlLockoutTable();
 
 describe('MysqlLockoutStore (real drizzle-mysql2 builder, fake client)', () => {
   it('increment issues an atomic windowed upsert then re-reads the row', async () => {
-    const { db, calls } = fakeMysql({ selectRows: [['k', 2, 0]] });
+    const { db, calls } = fakeMysql({ selectRows: [['k', 2, 0, 500]] });
     const store = new MysqlLockoutStore(db, table);
 
     const record = await store.increment('k', 500, 1000);
-    assert.deepEqual(record, { key: 'k', failures: 2, firstFailureAt: 0 });
+    assert.deepEqual(record, {
+      key: 'k',
+      failures: 2,
+      firstFailureAt: 0,
+      lastFailureAt: 500,
+    });
 
     // Two statements: the upsert, then the re-select (MySQL has no RETURNING).
     assert.equal(calls.length, 2);
@@ -66,15 +71,28 @@ describe('MysqlLockoutStore (real drizzle-mysql2 builder, fake client)', () => {
     assert.match(upsert, /on duplicate key update/);
     assert.match(upsert, /case when/); // the windowed reset-or-increment
     assert.match(calls[1].sql.toLowerCase(), /^select/);
+
+    // MySQL evaluates SET assignments left-to-right against already-updated
+    // values, and drizzle emits them in SCHEMA column-declaration order. The
+    // `failures` reset CASE reads `first_failure_at`, so the `failures`
+    // ASSIGNMENT must precede the `first_failure_at` assignment, or the window
+    // never resets on MySQL. Pin that here (the gated real-MySQL round-trip
+    // proves the runtime effect); this guards against a schema column reorder.
+    const setClause = upsert.slice(upsert.indexOf('on duplicate key update'));
+    assert.ok(
+      setClause.indexOf('`failures` =') < setClause.indexOf('`first_failure_at` ='),
+      'failures must be assigned before first_failure_at in the MySQL SET clause',
+    );
   });
 
   it('get returns the mapped record when present', async () => {
-    const { db } = fakeMysql({ selectRows: [['k', 4, 123]] });
+    const { db } = fakeMysql({ selectRows: [['k', 4, 123, 456]] });
     const store = new MysqlLockoutStore(db, table);
     assert.deepEqual(await store.get('k'), {
       key: 'k',
       failures: 4,
       firstFailureAt: 123,
+      lastFailureAt: 456,
     });
   });
 

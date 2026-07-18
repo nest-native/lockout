@@ -7,6 +7,43 @@ This project follows semantic versioning for the published packages. Sample,
 documentation, and CI-only changes may remain unreleased until the next package
 release is useful for users.
 
+## 0.3.0
+
+A security-hardening release from a design review + an adversarial audit against
+the django-axes/DRF vulnerability history. **Includes one behavior change and a
+store-schema change — see Migrating below.**
+
+### `@authlock/core`
+
+- **Fixed: escalating (tiered) cooloff leaked unthrottled guesses.** The cooloff
+  now cools off from the MOST RECENT failure (`lastFailureAt`), not the window
+  start, so every failed attempt re-locks the identity — closing a gap where, in
+  a tiered config, an attacker got a burst of free guesses between the base lock
+  and the next tier. The window (and the maximum lockout duration) is still
+  measured from the first failure, so a sustained attacker cannot keep a victim
+  locked out beyond `windowMs`.
+- **Added `last_failure_at`** to `FailureRecord` and every Drizzle table.
+- **Tier validation.** The constructor now rejects tier configs that would
+  silently weaken the control: non-integer / non-positive / `NaN` `atFailures`,
+  non-finite / non-positive `cooloffMs`, duplicate thresholds, and — importantly
+  — a **non-monotonic** schedule (a higher failure count that would lock for
+  *less* time, which an attacker could use to self-unlock early).
+- **`onLockout` now fires on tier escalations**, not just the initial lock (once
+  per escalation; best-effort under MySQL concurrency).
+- Docs: a security section covering the `X-Forwarded-For` / proxy-trust spoofing
+  class (bypass and victim-DoS), identity normalization, store-growth bounding
+  via scheduled `pruneExpired` + upstream rate limiting, and the fail-open
+  behavior during a store outage.
+
+### Migrating from 0.2.x
+
+The Drizzle stores gained a `last_failure_at` column. The lockout table is
+ephemeral (transient counters), so the simplest migration is to **drop and
+recreate it** from the updated `*LockoutTable()` factory. To migrate in place
+instead: `ALTER TABLE lockout_attempts ADD COLUMN last_failure_at <bigint|integer> NOT NULL DEFAULT 0`
+(the in-memory store needs nothing). The `LockoutManager` API is unchanged; if
+you read `FailureRecord` directly, note the added `lastFailureAt` field.
+
 ## 0.2.0
 
 Completeness + safety follow-up after a design review of 0.1.0.

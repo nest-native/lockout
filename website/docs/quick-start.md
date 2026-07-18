@@ -78,6 +78,20 @@ response (CAPTCHA/delay) for the username dimension. The library locks exactly
 what you configure — choosing safe `parameters` is your call.
 :::
 
+:::danger Never trust a spoofable IP
+The classic lockout vulnerability (django-axes, django-defender, DRF apps): if
+the `ip` you key on comes from a client-controllable header like
+`X-Forwarded-For`, an attacker rotates it to **bypass** IP lockout, or forges a
+victim's IP to **lock them out**. Pass the real connection address; only trust a
+proxy header if your proxy sets it and strips the client's. The NestJS adapter's
+default extractor uses `req.ip` (not `X-Forwarded-For`) — behind a proxy,
+configure your platform's `trust proxy` correctly. And **never `whitelist` on a
+dimension an attacker can spoof.**
+:::
+
+See the [Security & operations](./api-reference.md) notes for identity
+normalization, bounding store growth, and the fail-open trade-off.
+
 ## Unlocking an identity
 
 `recordSuccess` clears the counters on a successful login. For an

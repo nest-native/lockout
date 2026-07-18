@@ -1,6 +1,6 @@
 {
   "name": "@nest-native/lockout",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Thin NestJS adapter over @authlock/core — a LockoutGuard, LockoutService, and DynamicModule for django-axes-style login lockout in NestJS apps",
   "keywords": [
     "nestjs",
@@ -52,7 +52,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json"
   },
   "dependencies": {
-    "@authlock/core": "0.2.0"
+    "@authlock/core": "0.3.0"
   },
   "peerDependencies": {
     "@nestjs/common": "^10.0.0 || ^11.0.0 || ^12.0.0",

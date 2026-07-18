@@ -11,8 +11,13 @@ import { sqliteLockoutTable } from '../dialects/sqlite';
 
 // DB-free proof that all three dialect tables agree on the column shape the
 // store depends on: a primary-key `key`, and NOT-NULL `failures` /
-// `first_failure_at`.
-const EXPECTED_COLUMNS = ['failures', 'first_failure_at', 'key'];
+// `first_failure_at` / `last_failure_at`.
+const EXPECTED_COLUMNS = [
+  'failures',
+  'first_failure_at',
+  'key',
+  'last_failure_at',
+];
 
 function assertShape(config: {
   name: string;

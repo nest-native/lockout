@@ -10,7 +10,8 @@ const table = sqliteLockoutTable();
 const DDL = `CREATE TABLE lockout_attempts (
   key text PRIMARY KEY,
   failures integer NOT NULL,
-  first_failure_at integer NOT NULL
+  first_failure_at integer NOT NULL,
+  last_failure_at integer NOT NULL
 )`;
 
 runStoreContract('sqlite (better-sqlite3)', () => {

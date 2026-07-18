@@ -21,24 +21,32 @@ export function runStoreContract(
   makeHarness: () => StoreHarness | Promise<StoreHarness>,
 ): void {
   describe(`LockoutStore contract — ${label}`, () => {
-    it('creates, increments within the window, then resets after it', async () => {
+    it('creates, increments (advancing lastFailureAt), then resets after the window', async () => {
       const { store, teardown } = await makeHarness();
       try {
         assert.deepEqual(await store.increment('k', 0, 1000), {
           key: 'k',
           failures: 1,
           firstFailureAt: 0,
+          lastFailureAt: 0,
         });
+        // Within the window: failures climb, firstFailureAt is pinned, but
+        // lastFailureAt advances to `now` (this is what re-anchors the cooloff).
         assert.deepEqual(await store.increment('k', 500, 1000), {
           key: 'k',
           failures: 2,
           firstFailureAt: 0,
+          lastFailureAt: 500,
         });
-        // 2000 - 0 >= 1000 → the window is over, start a fresh one.
+        // 2000 - firstFailureAt(0) >= 1000 → the window is over: a fresh run
+        // resets BOTH timestamps to `now`. (On MySQL this is the assignment
+        // whose SET ordering the store must get right — real-MySQL gated tests
+        // exercise this exact path.)
         assert.deepEqual(await store.increment('k', 2000, 1000), {
           key: 'k',
           failures: 1,
           firstFailureAt: 2000,
+          lastFailureAt: 2000,
         });
       } finally {
         await teardown?.();
@@ -54,6 +62,7 @@ export function runStoreContract(
           key: 'k',
           failures: 1,
           firstFailureAt: 100,
+          lastFailureAt: 100,
         });
       } finally {
         await teardown?.();
