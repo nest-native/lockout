@@ -1,11 +1,13 @@
 import { deriveKeys } from './key';
 import {
+  cooloffFor,
   effectiveWindowMs,
   evaluateRecord,
   type EvaluationConfig,
   type RecordEvaluation,
 } from './policy';
 import type {
+  CooloffTier,
   FailMode,
   FailureRecord,
   Identifiers,
@@ -14,6 +16,52 @@ import type {
   LockoutParameter,
   LockoutStore,
 } from './interfaces';
+
+/**
+ * Reject tier configurations that would silently weaken or disable the control.
+ * A tier with a non-positive cooloff never locks; a non-integer/NaN `atFailures`
+ * never matches the integer failure count (dead config); duplicate thresholds
+ * make the cooloff order-dependent; and a NON-MONOTONIC schedule (failing MORE
+ * yields a SHORTER lock) lets an attacker self-unlock early by failing more.
+ */
+function validateTiers(cooloffMs: number, tiers?: readonly CooloffTier[]): void {
+  if (tiers === undefined) {
+    return;
+  }
+  const seen = new Set<number>();
+  for (const tier of tiers) {
+    if (!Number.isInteger(tier.atFailures) || tier.atFailures < 1) {
+      throw new TypeError(
+        'LockoutManager: each tier `atFailures` must be an integer >= 1.',
+      );
+    }
+    if (!Number.isFinite(tier.cooloffMs) || tier.cooloffMs <= 0) {
+      throw new TypeError(
+        'LockoutManager: each tier `cooloffMs` must be a positive number.',
+      );
+    }
+    if (seen.has(tier.atFailures)) {
+      throw new TypeError(
+        `LockoutManager: duplicate tier atFailures ${tier.atFailures}.`,
+      );
+    }
+    seen.add(tier.atFailures);
+  }
+  // The full schedule — base cooloff, then each tier by ascending atFailures —
+  // must be non-decreasing, so a later (higher-failure) tier can never shorten
+  // the lock below an earlier one.
+  const ordered = [...tiers].sort((a, b) => a.atFailures - b.atFailures);
+  let previous = cooloffMs;
+  for (const tier of ordered) {
+    if (tier.cooloffMs < previous) {
+      throw new TypeError(
+        'LockoutManager: tier cooloffMs must be non-decreasing by atFailures ' +
+          '(a higher failure count must not lock for less time).',
+      );
+    }
+    previous = tier.cooloffMs;
+  }
+}
 
 function notLocked(): LockoutDecision {
   return { locked: false, retryAfterMs: null };
@@ -86,6 +134,7 @@ export class LockoutManager {
     if (!(options.cooloffMs > 0)) {
       throw new TypeError('LockoutManager: `cooloffMs` must be greater than 0.');
     }
+    validateTiers(options.cooloffMs, options.tiers);
     this.store = options.store;
     this.parameters = options.parameters;
     this.limit = options.limit;
@@ -202,10 +251,28 @@ export class LockoutManager {
     }
     const evaluation = evaluateRecord(record, now, this.evaluation);
     const decision = toDecision(evaluation, parameter);
-    if (record.failures === this.limit && evaluation.locked) {
+    if (evaluation.locked && this.isLockEscalation(record.failures)) {
       this.fireOnLockout(id, decision);
     }
     return decision;
+  }
+
+  /**
+   * True when reaching `failures` is a NEW lock or a step up to a longer tier —
+   * i.e. the initial crossing of the limit, or a failure count that just crossed
+   * a tier threshold and lengthened the cooloff. Fires `onLockout` once per
+   * escalation. Assumes the store increments failures by exactly 1 (the built-in
+   * stores do; custom stores must too, per the `LockoutStore` contract).
+   */
+  private isLockEscalation(failures: number): boolean {
+    if (failures === this.limit) {
+      return true;
+    }
+    const tiers = this.evaluation.tiers;
+    return (
+      cooloffFor(failures, this.cooloffMs, tiers) >
+      cooloffFor(failures - 1, this.cooloffMs, tiers)
+    );
   }
 
   private async readKey(key: string, now: number): Promise<RecordEvaluation> {

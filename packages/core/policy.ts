@@ -63,8 +63,17 @@ const NOT_LOCKED: RecordEvaluation = { locked: false, retryAfterMs: null };
 /**
  * Decide whether one stored record is currently locked. A record locks when it
  * has reached the failure limit and the cooloff for that failure count has not
- * yet elapsed since the window began. A record whose window has fully expired,
- * or that is under the limit, is not locked.
+ * yet elapsed since the MOST RECENT failure. A record whose window has fully
+ * expired (measured from the FIRST failure, which bounds the run), or that is
+ * under the limit, is not locked.
+ *
+ * The two anchors are deliberate: the cooloff runs from `lastFailureAt` so every
+ * failed attempt re-locks the identity (no unthrottled gap between escalating
+ * tiers), while the window runs from `firstFailureAt` so a run cannot outlive
+ * `windowMs` — capping how long an attacker can keep a victim locked out. Since
+ * `windowMs >= cooloffFor(failures)` and `lastFailureAt >= firstFailureAt`, the
+ * window can only ever cut a lock SHORT (the intended cap), never leave a
+ * should-be-locked record reporting unlocked mid-cooloff.
  */
 export function evaluateRecord(
   record: FailureRecord | null,
@@ -81,9 +90,15 @@ export function evaluateRecord(
     return NOT_LOCKED;
   }
   const cooloffMs = cooloffFor(record.failures, config.cooloffMs, config.tiers);
-  const retryAfterMs = record.firstFailureAt + cooloffMs - now;
-  if (retryAfterMs <= 0) {
+  const cooloffRemaining = record.lastFailureAt + cooloffMs - now;
+  if (cooloffRemaining <= 0) {
     return NOT_LOCKED;
   }
+  // The window cap (from firstFailureAt) can lift the lock sooner than the
+  // cooloff would; report the EARLIER of the two so Retry-After never overstates
+  // how long the identity is actually locked. windowRemaining is > 0 here
+  // because the window-expiry check above already returned for expired records.
+  const windowRemaining = record.firstFailureAt + config.windowMs - now;
+  const retryAfterMs = Math.min(cooloffRemaining, windowRemaining);
   return { locked: true, retryAfterMs };
 }

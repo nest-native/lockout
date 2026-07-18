@@ -23,13 +23,15 @@ after(async () => {
 const PG_DDL = `CREATE TABLE IF NOT EXISTS lockout_attempts (
   key text PRIMARY KEY,
   failures integer NOT NULL,
-  first_failure_at bigint NOT NULL
+  first_failure_at bigint NOT NULL,
+  last_failure_at bigint NOT NULL
 )`;
 
 const MYSQL_DDL = `CREATE TABLE IF NOT EXISTS lockout_attempts (
   \`key\` varchar(64) PRIMARY KEY,
   failures int NOT NULL,
-  first_failure_at bigint NOT NULL
+  first_failure_at bigint NOT NULL,
+  last_failure_at bigint NOT NULL
 )`;
 
 if (POSTGRES_URL) {

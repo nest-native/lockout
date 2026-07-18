@@ -9,7 +9,7 @@
     "test": "npm run typecheck && npm run smoke"
   },
   "dependencies": {
-    "@authlock/core": "0.2.0",
+    "@authlock/core": "0.3.0",
     "express": "^5.1.0"
   },
   "devDependencies": {

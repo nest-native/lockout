@@ -18,14 +18,17 @@ export class InMemoryLockoutStore implements LockoutStore {
 
   increment(key: string, now: number, windowMs: number): FailureRecord {
     const existing = this.records.get(key);
+    // The window (and reset) is anchored to firstFailureAt; the cooloff to
+    // lastFailureAt, which advances to `now` on every increment.
     const fresh =
       existing === undefined || now - existing.firstFailureAt >= windowMs;
     const record: FailureRecord = fresh
-      ? { key, failures: 1, firstFailureAt: now }
+      ? { key, failures: 1, firstFailureAt: now, lastFailureAt: now }
       : {
           key,
           failures: existing.failures + 1,
           firstFailureAt: existing.firstFailureAt,
+          lastFailureAt: now,
         };
     this.records.set(key, record);
     return record;

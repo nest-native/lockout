@@ -23,7 +23,7 @@ title: API Reference
 | --- | --- |
 | `Identifiers` | the identity dimensions (`username`, `ip`, `userAgent`, custom…) |
 | `LockoutParameter` | one dimension combination that can trip a lock, e.g. `['ip', 'userAgent']` |
-| `FailureRecord` | a stored counter: `{key, failures, firstFailureAt}` — lock state is *derived*, never stored |
+| `FailureRecord` | a stored counter: `{key, failures, firstFailureAt, lastFailureAt}` — lock state is *derived*, never stored. The window is measured from `firstFailureAt`; the cooloff from `lastFailureAt`. |
 | `CooloffTier` | `{atFailures, cooloffMs}` — escalating cooloff by failure count |
 | `FailMode` | `'open'` (allow + log on store error, default) or `'closed'` (deny) |
 | `LockoutPolicy` | limit, cooloff, window, tiers, parameters, whitelist, resetOnSuccess, failMode |
@@ -87,3 +87,26 @@ configure your platform's `trust proxy` (or supply your own `extractor`) so the
 IP dimension reflects a source you actually trust; the library never reads
 proxy headers for you.
 :::
+
+## Security & operations
+
+- **Do not trust `X-Forwarded-For`.** This is the vulnerability class that hit
+  django-axes and other tools: if the IP you key on comes from a spoofable
+  header, an attacker can rotate it to bypass IP lockout, or forge a victim's IP
+  to lock them out. The default extractor uses `req.ip`, not `X-Forwarded-For` —
+  behind a proxy, configure `trust proxy` so `req.ip` reflects a source you
+  trust. Because a lock trips if **any** parameter trips, a `['username']`
+  parameter still catches a single-target brute force even when the IP is
+  spoofable. And never `whitelist` on a dimension an attacker can forge.
+- **Normalize identity dimensions.** `Alice` and `alice` (and unicode variants)
+  hash to different counters. If your auth is case-insensitive, lowercase /
+  canonicalize the username before passing it, or the limit is per-spelling.
+- **Bound store growth.** Every distinct identity creates a record. Schedule
+  `pruneExpired()` (it drops records past their window, capping the store to
+  identities active within `windowMs`), put a rate limiter
+  ([`@nestjs/throttler`](https://www.npmjs.com/package/@nestjs/throttler)) in
+  front, and use a Drizzle store (not in-memory) for hostile or multi-instance
+  deployments.
+- **fail-open vs. availability.** With the default `failMode: 'open'`, a store
+  error allows the attempt and logs — so brute-force protection is off while the
+  store is down. Use `failMode: 'closed'` to deny during an outage instead.

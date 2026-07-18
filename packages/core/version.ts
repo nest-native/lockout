@@ -2,4 +2,4 @@
 // adapters (e.g. @nest-native/lockout) can surface it without reading
 // package.json. Kept in its own module so the barrel (index.ts) stays a pure
 // re-export surface. Bump in lockstep with package.json on every release.
-export const VERSION = '0.2.0';
+export const VERSION = '0.3.0';

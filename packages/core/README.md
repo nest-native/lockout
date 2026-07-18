@@ -93,7 +93,37 @@ account** just by submitting failed logins for that username. Mitigate it:
   and reserve a hard lock for the IP dimension.
 
 The library locks exactly what you configure — choosing safe `parameters` is
-your decision.
+your decision. The cooloff cools off from the *last* failure, so a persistent
+attacker stays locked with no gaps; the window (from the *first* failure) caps
+how long any single run can keep an identity locked, at `windowMs`.
+
+## Security & operations
+
+- **Do not trust `X-Forwarded-For`.** This is the vulnerability class that hit
+  django-axes and other tools: if the IP you key on comes from a spoofable
+  header, an attacker can rotate it to bypass IP lockout *or* forge a victim's
+  IP to lock them out. The engine keys on whatever `ip` you put in `Identifiers`
+  — pass the real connection address, and only trust a proxy header if your
+  proxy sets it and strips any client-supplied value. (The NestJS adapter's
+  default extractor uses `req.ip`, not `X-Forwarded-For`.) Because a lock trips
+  if **any** parameter trips, a `['username']` parameter still catches a
+  single-target brute force even when the IP is spoofable.
+- **Don't `whitelist` on a spoofable dimension.** A whitelist keyed on an IP an
+  attacker can forge is a bypass; key it on something they can't control.
+- **Normalize identity dimensions.** `Alice` and `alice` (and unicode variants)
+  hash to different counters. If your auth is case-insensitive, lowercase /
+  canonicalize the username before you pass it, or the limit is per-spelling.
+- **Bound store growth.** Every distinct identity creates a record, so a flood
+  of fabricated usernames/IPs grows the store. Schedule `pruneExpired()` (it
+  drops records past their window, capping the store to identities active within
+  `windowMs`), put a request rate limiter in front (e.g.
+  [`@nestjs/throttler`](https://www.npmjs.com/package/@nestjs/throttler), which
+  caps distinct keys per second), and use a Drizzle store — not the in-memory
+  one — for hostile or multi-instance deployments.
+- **fail-open trades protection for availability during a store outage.** With
+  the default `failMode: 'open'`, a store error allows the attempt (and logs) —
+  so while the store is down, brute-force protection is off. Use
+  `failMode: 'closed'` if you would rather deny during an outage.
 
 ## A shared, durable store
 

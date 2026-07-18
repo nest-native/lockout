@@ -12,22 +12,37 @@ describe('InMemoryLockoutStore', () => {
   it('creates a record on the first increment', () => {
     const store = new InMemoryLockoutStore();
     const record = store.increment('k', 100, 1000);
-    assert.deepEqual(record, { key: 'k', failures: 1, firstFailureAt: 100 });
+    assert.deepEqual(record, {
+      key: 'k',
+      failures: 1,
+      firstFailureAt: 100,
+      lastFailureAt: 100,
+    });
   });
 
-  it('continues the same window on subsequent increments', () => {
+  it('continues the window but advances lastFailureAt on subsequent increments', () => {
     const store = new InMemoryLockoutStore();
     store.increment('k', 100, 1000);
     const record = store.increment('k', 500, 1000);
-    assert.deepEqual(record, { key: 'k', failures: 2, firstFailureAt: 100 });
+    assert.deepEqual(record, {
+      key: 'k',
+      failures: 2,
+      firstFailureAt: 100, // pinned
+      lastFailureAt: 500, // re-anchored to now
+    });
   });
 
-  it('resets to a fresh window once it has elapsed', () => {
+  it('resets both timestamps to a fresh window once it has elapsed', () => {
     const store = new InMemoryLockoutStore();
     store.increment('k', 100, 1000);
-    // 1100 - 100 >= 1000 → the previous window is over, start a new one.
+    // 1100 - firstFailureAt(100) >= 1000 → the previous window is over.
     const record = store.increment('k', 1100, 1000);
-    assert.deepEqual(record, { key: 'k', failures: 1, firstFailureAt: 1100 });
+    assert.deepEqual(record, {
+      key: 'k',
+      failures: 1,
+      firstFailureAt: 1100,
+      lastFailureAt: 1100,
+    });
   });
 
   it('returns the stored record, or null when the key is unknown', () => {
@@ -38,6 +53,7 @@ describe('InMemoryLockoutStore', () => {
       key: 'k',
       failures: 1,
       firstFailureAt: 100,
+      lastFailureAt: 100,
     });
   });
 

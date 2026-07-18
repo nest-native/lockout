@@ -27,8 +27,18 @@ export interface FailureRecord {
   key: string;
   /** Failures accumulated since `firstFailureAt` in the current window. */
   failures: number;
-  /** Epoch milliseconds of the first failure in the current window. */
+  /**
+   * Epoch milliseconds of the first failure in the current window. The window
+   * (and therefore how long a run can accumulate) is measured from here, which
+   * bounds the maximum lockout an attacker can sustain.
+   */
   firstFailureAt: number;
+  /**
+   * Epoch milliseconds of the MOST RECENT failure. The cooloff is measured from
+   * here — every failed attempt re-anchors the lock — so a persistent attacker
+   * stays locked with no gaps between escalating tiers.
+   */
+  lastFailureAt: number;
 }
 
 /**

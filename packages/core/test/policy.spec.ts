@@ -88,7 +88,7 @@ describe('evaluateRecord', () => {
 
   it('is not locked once the window has fully elapsed', () => {
     // Enough failures to lock, but the window has aged out: not locked.
-    const record: FailureRecord = { key: 'k', failures: 9, firstFailureAt: 0 };
+    const record: FailureRecord = { key: 'k', failures: 9, firstFailureAt: 0, lastFailureAt: 0 };
     assert.deepEqual(evaluateRecord(record, 1000, config()), {
       locked: false,
       retryAfterMs: null,
@@ -96,7 +96,7 @@ describe('evaluateRecord', () => {
   });
 
   it('is not locked below the failure limit', () => {
-    const record: FailureRecord = { key: 'k', failures: 2, firstFailureAt: 0 };
+    const record: FailureRecord = { key: 'k', failures: 2, firstFailureAt: 0, lastFailureAt: 0 };
     assert.deepEqual(evaluateRecord(record, 10, config()), {
       locked: false,
       retryAfterMs: null,
@@ -104,7 +104,7 @@ describe('evaluateRecord', () => {
   });
 
   it('locks with a positive retry-after at the limit', () => {
-    const record: FailureRecord = { key: 'k', failures: 3, firstFailureAt: 0 };
+    const record: FailureRecord = { key: 'k', failures: 3, firstFailureAt: 0, lastFailureAt: 0 };
     assert.deepEqual(evaluateRecord(record, 200, config()), {
       locked: true,
       retryAfterMs: 800,
@@ -112,7 +112,7 @@ describe('evaluateRecord', () => {
   });
 
   it('unlocks once the cooloff has elapsed within a longer window', () => {
-    const record: FailureRecord = { key: 'k', failures: 3, firstFailureAt: 0 };
+    const record: FailureRecord = { key: 'k', failures: 3, firstFailureAt: 0, lastFailureAt: 0 };
     // Base cooloff 1000 has elapsed at now=1000, but the window is 5000, so the
     // record is still present — yet no longer locked.
     assert.deepEqual(evaluateRecord(record, 1000, config({ windowMs: 5000 })), {
@@ -122,7 +122,7 @@ describe('evaluateRecord', () => {
   });
 
   it('uses the tier cooloff when computing retry-after', () => {
-    const record: FailureRecord = { key: 'k', failures: 6, firstFailureAt: 0 };
+    const record: FailureRecord = { key: 'k', failures: 6, firstFailureAt: 0, lastFailureAt: 0 };
     const cfg = config({
       windowMs: 60000,
       tiers: [{ atFailures: 6, cooloffMs: 30000 }],
@@ -130,6 +130,56 @@ describe('evaluateRecord', () => {
     assert.deepEqual(evaluateRecord(record, 5000, cfg), {
       locked: true,
       retryAfterMs: 25000,
+    });
+  });
+
+  it('anchors the cooloff to lastFailureAt, not firstFailureAt', () => {
+    // A run that started at 0 but whose latest failure was at 5000. With the
+    // cooloff anchored to lastFailureAt (5000), the lock runs to 5000+1000=6000.
+    // (The old firstFailureAt anchor would have said 0+1000-5500 < 0 → unlocked
+    // — that was the between-tier gap this fix closes.)
+    const record: FailureRecord = {
+      key: 'k',
+      failures: 3,
+      firstFailureAt: 0,
+      lastFailureAt: 5000,
+    };
+    assert.deepEqual(evaluateRecord(record, 5500, config({ windowMs: 100000 })), {
+      locked: true,
+      retryAfterMs: 500,
+    });
+  });
+
+  it('caps retry-after at the window when the window lifts sooner than the cooloff', () => {
+    // Window (from firstFailureAt) expires at 1000; cooloff (from lastFailureAt
+    // 900) would run to 1900. Still locked at now=500, but retry-after is capped
+    // to the window remaining (500), not the cooloff remaining (1400).
+    const record: FailureRecord = {
+      key: 'k',
+      failures: 3,
+      firstFailureAt: 0,
+      lastFailureAt: 900,
+    };
+    assert.deepEqual(evaluateRecord(record, 500, config()), {
+      locked: true,
+      retryAfterMs: 500, // min(900+1000-500, 0+1000-500) = min(1400, 500)
+    });
+  });
+
+  it('lets the window (from firstFailureAt) cap a lock the cooloff would extend', () => {
+    // lastFailureAt is recent (cooloff from it would keep locking), but the
+    // window measured from firstFailureAt has fully elapsed — the run is capped.
+    const record: FailureRecord = {
+      key: 'k',
+      failures: 3,
+      firstFailureAt: 0,
+      lastFailureAt: 900,
+    };
+    // now - firstFailureAt(0) = 1000 >= windowMs 1000 → not locked, even though
+    // lastFailureAt(900) + cooloff(1000) = 1900 > now. This bounds max lockout.
+    assert.deepEqual(evaluateRecord(record, 1000, config()), {
+      locked: false,
+      retryAfterMs: null,
     });
   });
 });
