@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@authlock/core": "0.3.0",
-    "@nest-native/lockout": "0.3.0",
+    "@nest-native/lockout": "0.3.1",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",
     "@nestjs/platform-express": "^11.1.27",

@@ -24,8 +24,14 @@ export interface LockoutModuleOptions extends LockoutManagerOptions {
 /** Options for {@link LockoutModule.forRootAsync}. */
 export interface LockoutModuleAsyncOptions
   extends Pick<ModuleMetadata, 'imports'> {
+  // `any[]` (not `unknown[]`) mirrors NestJS's own `FactoryProvider.useFactory`:
+  // under `strictFunctionTypes` a factory declared with typed injected params —
+  // the common case, e.g. `(db: MyDatabase) => (...)` fed by `inject` — is NOT
+  // assignable to `(...args: unknown[]) => ...`, forcing callers to widen to
+  // `unknown` and re-narrow. `any[]` lets typed factories assign directly.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useFactory: (
-    ...args: unknown[]
+    ...args: any[]
   ) => LockoutModuleOptions | Promise<LockoutModuleOptions>;
   inject?: Array<Type<unknown> | string | symbol>;
   isGlobal?: boolean;

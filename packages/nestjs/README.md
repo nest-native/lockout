@@ -101,6 +101,27 @@ login(@Req() req) {
 }
 ```
 
+### Non-HTTP transports (tRPC, GraphQL, WebSocket)
+
+`LockoutGuard`'s default extractor reads the credential from the HTTP request
+body (`req.body`), which doesn't fit transports where the input arrives
+differently — e.g. tRPC's batched/superjson payload. There, skip the guard and
+use `LockoutService` directly in your resolver/procedure, building the identity
+from the validated input plus a source IP you expose in the transport's context:
+
+```ts
+async login(input: LoginInput, ip: string | undefined) {
+  const id = { email: input.email, ip };
+  const gate = await this.lockout.check(id);
+  if (gate.locked) {
+    // e.g. throw new HttpException({ ...429... }, 429), which @nest-native/trpc
+    // maps to a TRPCError('TOO_MANY_REQUESTS'), or throw a TRPCError yourself.
+  }
+  const ok = await this.verify(input);
+  await (ok ? this.lockout.reportSuccess(id) : this.lockout.reportFailure(id));
+}
+```
+
 ## Relationship to `@authlock/core`
 
 This package is a thin DI shell. All the lockout logic — failure counting,
