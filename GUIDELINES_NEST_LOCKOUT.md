@@ -122,9 +122,13 @@ because the neutral core is the whole cross-framework story.
 
 - **Every PR includes an explicit security pass.** This is a security control;
   a regression is a vulnerability. Reason explicitly about lockout **bypass** (a
-  locked identity slipping through), lockout **amplification / DoS** (an attacker
-  locking a victim out by spoofing the victim's username or IP), fail-mode
-  correctness, and the cross-instance counting guarantee.
+  locked identity slipping through — including via **un-normalized identity
+  dimensions**, where case/whitespace variants split the counter), lockout
+  **amplification / DoS** (an attacker locking a victim out by spoofing the
+  victim's username or IP), fail-mode correctness, and the cross-instance
+  counting guarantee.
+- **Audit logging is the app's job, built from the exposed hooks** — never log
+  the credential, only the identity dimensions used for the lock decision.
 - **Audit scope.** The `security:audit` release gate audits the *published*
   surface — `audit-production-surface.mjs` packs the core tarball and audits its
   production closure. Since the core publishes `"dependencies": {}`, that is

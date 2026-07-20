@@ -90,7 +90,9 @@ dimension an attacker can spoof.**
 :::
 
 See the [Security & operations](./api-reference.md) notes for identity
-normalization, bounding store growth, and the fail-open trade-off.
+normalization, bounding store growth, and the fail-open trade-off, and
+[Audit logging](./api-reference.md#audit-logging) for building a forensic trail
+from your handler and the `onLockout` hook.
 
 ## Unlocking an identity
 
