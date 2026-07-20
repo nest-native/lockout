@@ -71,4 +71,49 @@ describe('deriveKeys', () => {
     assert.notEqual(a, b);
     assert.notEqual(a, c);
   });
+
+  describe('normalize', () => {
+    const lower = { username: (v: string) => v.trim().toLowerCase() };
+
+    it('collapses case/whitespace variants to a single key (the bypass defence)', () => {
+      const canonical = deriveKeys({ username: 'alice' }, [['username']], lower)[0].key;
+      for (const variant of ['Alice', 'ALICE', '  alice ', 'aLiCe']) {
+        const [derived] = deriveKeys({ username: variant }, [['username']], lower);
+        assert.equal(derived.key, canonical, `${variant} must normalize to alice`);
+      }
+      // And it equals hashing the normalized value directly.
+      assert.equal(canonical, expectedKey([['username', 'alice']]));
+    });
+
+    it('only normalizes listed dimensions, leaving others verbatim', () => {
+      const [byUser, byIp] = deriveKeys(
+        { username: 'BOB', ip: '1.2.3.4' },
+        [['username'], ['ip']],
+        lower,
+      );
+      assert.equal(byUser.key, expectedKey([['username', 'bob']]));
+      assert.equal(byIp.key, expectedKey([['ip', '1.2.3.4']]), 'ip untouched');
+    });
+
+    it('normalizes each dimension of a combination parameter independently', () => {
+      const [derived] = deriveKeys(
+        { username: 'CAROL', ip: '1.2.3.4' },
+        [['username', 'ip']],
+        { username: (v: string) => v.toLowerCase() },
+      );
+      assert.equal(
+        derived.key,
+        expectedKey([
+          ['username', 'carol'],
+          ['ip', '1.2.3.4'],
+        ]),
+      );
+    });
+
+    it('is a no-op when no normalizer is given for a dimension', () => {
+      const withEmptyMap = deriveKeys({ username: 'Dave' }, [['username']], {})[0].key;
+      const without = deriveKeys({ username: 'Dave' }, [['username']])[0].key;
+      assert.equal(withEmptyMap, without);
+    });
+  });
 });

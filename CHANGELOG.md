@@ -7,6 +7,19 @@ This project follows semantic versioning for the published packages. Sample,
 documentation, and CI-only changes may remain unreleased until the next package
 release is useful for users.
 
+## Unreleased
+
+### `@authlock/core`
+
+- **Added per-dimension identity `normalize`** — a `Record<dimension, (value) =>
+  string>` on the policy, applied to each identity value before key derivation
+  on every path (check / record / reset). Without it, `Alice`, `alice`, and
+  `alice ` hash to three different counters, so a case-insensitive login could
+  be brute-forced past the limit by varying case or whitespace — a bypass the
+  docs previously only warned about. Normalizers are validated at construction
+  (each entry must be a function). Fully backward compatible: omit `normalize`
+  and behaviour is unchanged.
+
 ## 0.3.1
 
 `@nest-native/lockout` only (`@authlock/core` unchanged at 0.3.0).

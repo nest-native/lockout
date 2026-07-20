@@ -15,6 +15,7 @@ import type {
   LockoutManagerOptions,
   LockoutParameter,
   LockoutStore,
+  Normalize,
 } from './interfaces';
 
 /**
@@ -60,6 +61,24 @@ function validateTiers(cooloffMs: number, tiers?: readonly CooloffTier[]): void 
       );
     }
     previous = tier.cooloffMs;
+  }
+}
+
+/**
+ * Reject a `normalize` map whose entries are not functions — a non-function
+ * normalizer would throw (or silently no-op) inside key derivation, on the hot
+ * auth path, long after startup. Fail loud instead.
+ */
+function validateNormalize(normalize?: Normalize): void {
+  if (normalize === undefined) {
+    return;
+  }
+  for (const [dimension, fn] of Object.entries(normalize)) {
+    if (typeof fn !== 'function') {
+      throw new TypeError(
+        `LockoutManager: normalize['${dimension}'] must be a function.`,
+      );
+    }
   }
 }
 
@@ -112,6 +131,7 @@ function mostRestrictive(
 export class LockoutManager {
   private readonly store: LockoutStore;
   private readonly parameters: readonly LockoutParameter[];
+  private readonly normalize?: Normalize;
   private readonly limit: number;
   private readonly cooloffMs: number;
   private readonly windowMs: number;
@@ -135,8 +155,10 @@ export class LockoutManager {
       throw new TypeError('LockoutManager: `cooloffMs` must be greater than 0.');
     }
     validateTiers(options.cooloffMs, options.tiers);
+    validateNormalize(options.normalize);
     this.store = options.store;
     this.parameters = options.parameters;
+    this.normalize = options.normalize;
     this.limit = options.limit;
     this.cooloffMs = options.cooloffMs;
     this.windowMs = effectiveWindowMs(
@@ -169,7 +191,7 @@ export class LockoutManager {
     }
     const now = this.now();
     let decision = notLocked();
-    for (const { parameter, key } of deriveKeys(id, this.parameters)) {
+    for (const { parameter, key } of deriveKeys(id, this.parameters, this.normalize)) {
       const evaluation = await this.readKey(key, now);
       decision = mostRestrictive(decision, toDecision(evaluation, parameter));
     }
@@ -187,7 +209,7 @@ export class LockoutManager {
     }
     const now = this.now();
     let decision = notLocked();
-    for (const { parameter, key } of deriveKeys(id, this.parameters)) {
+    for (const { parameter, key } of deriveKeys(id, this.parameters, this.normalize)) {
       const keyDecision = await this.applyFailure(id, parameter, key, now);
       decision = mostRestrictive(decision, keyDecision);
     }
@@ -219,7 +241,7 @@ export class LockoutManager {
   }
 
   private async clearKeys(id: Identifiers): Promise<void> {
-    for (const { key } of deriveKeys(id, this.parameters)) {
+    for (const { key } of deriveKeys(id, this.parameters, this.normalize)) {
       try {
         await this.store.clear(key);
       } catch (error) {
