@@ -13,11 +13,12 @@
 framework-agnostic core ([`@authlock/core`](packages/core)) with a first-class
 NestJS integration ([`@nest-native/lockout`](packages/nestjs)).
 
-> [!WARNING]
-> **Pre-release scaffold (`0.0.0`).** This repository's foundation — build,
-> test, coverage, complexity, release, and security gates — is in place, but the
-> engine and the NestJS adapter are not implemented yet. Everything below is the
-> planned design; the working plan drives implementation.
+> [!NOTE]
+> **Published and following semver** — [`@authlock/core`](https://www.npmjs.com/package/@authlock/core)
+> and [`@nest-native/lockout`](https://www.npmjs.com/package/@nest-native/lockout)
+> are on npm (OIDC trusted publishing with provenance). Version history is in
+> the [changelog](CHANGELOG.md); full documentation lives at
+> [nest-native.dev/lockout](https://nest-native.dev/lockout/).
 
 ## The problem it solves
 
