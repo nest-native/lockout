@@ -19,6 +19,19 @@ release is useful for users.
   docs previously only warned about. Normalizers are validated at construction
   (each entry must be a function). Fully backward compatible: omit `normalize`
   and behaviour is unchanged.
+- **Added `LockoutManager.resetAll()`** and a `clearAll()` method on the
+  `LockoutStore` seam (implemented by the in-memory and all three Drizzle
+  stores) — a bulk administrative "unlock everyone" for incident response,
+  distinct from the window-based `pruneExpired()`. Additive: the default
+  behaviour is unchanged unless you call it. (Unlocking a single identity
+  across a combination-key parameter remains unsupported by design — the
+  hashed key can't be reversed to a dimension; use `reset(id)` for
+  single-dimension parameters or `resetAll()` for the whole store.)
+
+### `@nest-native/lockout`
+
+- **Added `LockoutService.resetAll()`** — the adapter pass-through for the bulk
+  unlock above.
 
 ## 0.3.1
 

@@ -119,4 +119,13 @@ describe('MysqlLockoutStore (real drizzle-mysql2 builder, fake client)', () => {
     assert.match(calls[0].sql.toLowerCase(), /^delete from/);
     assert.match(calls[0].sql.toLowerCase(), /first_failure_at/);
   });
+
+  it('clearAll deletes the whole table (no WHERE)', async () => {
+    const { db, calls } = fakeMysql({});
+    const store = new MysqlLockoutStore(db, table);
+    await store.clearAll();
+    const sql = calls[0].sql.toLowerCase();
+    assert.match(sql, /^delete from/);
+    assert.doesNotMatch(sql, /where/);
+  });
 });

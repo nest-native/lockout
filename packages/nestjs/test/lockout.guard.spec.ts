@@ -46,6 +46,9 @@ const throwingStore: LockoutStore = {
   clear(): void {
     throw new Error('store down');
   },
+  clearAll(): void {
+    throw new Error('store down');
+  },
   clearExpired(): number {
     throw new Error('store down');
   },

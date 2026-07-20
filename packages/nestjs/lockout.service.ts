@@ -46,4 +46,13 @@ export class LockoutService {
   reset(identity: Identifiers): Promise<void> {
     return this.manager.reset(identity);
   }
+
+  /**
+   * Administratively clear EVERY lockout counter — the "unlock everyone"
+   * incident-response action. Blunt and additive; prefer {@link reset} for a
+   * single identity.
+   */
+  resetAll(): Promise<void> {
+    return this.manager.resetAll();
+  }
 }

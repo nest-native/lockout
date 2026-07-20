@@ -80,6 +80,19 @@ export function runStoreContract(
       }
     });
 
+    it('clearAll removes every key regardless of age', async () => {
+      const { store, teardown } = await makeHarness();
+      try {
+        await store.increment('a', 100, 100000);
+        await store.increment('b', 5000, 100000);
+        await store.clearAll();
+        assert.equal(await store.get('a'), null);
+        assert.equal(await store.get('b'), null);
+      } finally {
+        await teardown?.();
+      }
+    });
+
     it('clearExpired removes only records older than the cutoff and counts them', async () => {
       const { store, teardown } = await makeHarness();
       try {

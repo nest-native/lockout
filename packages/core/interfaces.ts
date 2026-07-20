@@ -86,6 +86,12 @@ export interface LockoutStore {
   /** Remove the counter for `key` (used by reset-on-success). */
   clear(key: string): void | Promise<void>;
   /**
+   * Remove EVERY counter — a bulk administrative reset ("unlock everyone") for
+   * incident response. Distinct from {@link clearExpired}, which only drops
+   * records past their window; this wipes all of them.
+   */
+  clearAll(): void | Promise<void>;
+  /**
    * Housekeeping: drop records whose window began before `olderThan` (epoch ms).
    * Returns the number of records removed.
    */

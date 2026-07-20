@@ -59,6 +59,10 @@ export class SqliteLockoutStore implements LockoutStore {
     await this.db.delete(this.table).where(eq(this.table.key, key));
   }
 
+  async clearAll(): Promise<void> {
+    await this.db.delete(this.table);
+  }
+
   async clearExpired(olderThan: number): Promise<number> {
     const rows = await this.db
       .delete(this.table)
