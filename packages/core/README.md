@@ -110,9 +110,18 @@ how long any single run can keep an identity locked, at `windowMs`.
   single-target brute force even when the IP is spoofable.
 - **Don't `whitelist` on a spoofable dimension.** A whitelist keyed on an IP an
   attacker can forge is a bypass; key it on something they can't control.
-- **Normalize identity dimensions.** `Alice` and `alice` (and unicode variants)
-  hash to different counters. If your auth is case-insensitive, lowercase /
-  canonicalize the username before you pass it, or the limit is per-spelling.
+- **Normalize identity dimensions.** `Alice`, `alice`, and `alice ` hash to
+  three different counters, so on a case-insensitive login an attacker bypasses
+  the limit by varying case or whitespace. Configure a per-dimension
+  `normalize` map (applied before hashing, on every path — check / record /
+  reset) — or normalize in your own extractor:
+  ```ts
+  new LockoutManager({
+    parameters: [['username'], ['ip']],
+    normalize: { username: (v) => v.trim().toLowerCase() }, // ip left verbatim
+    // ...
+  });
+  ```
 - **Bound store growth.** Every distinct identity creates a record, so a flood
   of fabricated usernames/IPs grows the store. Schedule `pruneExpired()` (it
   drops records past their window, capping the store to identities active within

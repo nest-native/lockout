@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type { Identifiers, LockoutParameter } from './interfaces';
+import type { Identifiers, LockoutParameter, Normalize } from './interfaces';
 
 /** A configured parameter paired with the concrete key it resolves to. */
 export interface DerivedKey {
@@ -22,10 +22,17 @@ export interface DerivedKey {
  * than concatenated so a credential-bearing dimension never appears verbatim in
  * a store, and so arbitrary user input can never collide with or forge another
  * key by embedding the separator.
+ *
+ * A per-dimension `normalize` map (if given) is applied to each value before it
+ * is hashed, so equal-by-policy identities (`Alice` vs `alice`) collapse to one
+ * counter — the defence against case/whitespace lockout bypass. It is applied
+ * uniformly on every path (check / record / reset) because all of them route
+ * through here.
  */
 export function deriveKeys(
   id: Identifiers,
   parameters: readonly LockoutParameter[],
+  normalize?: Normalize,
 ): DerivedKey[] {
   const derived: DerivedKey[] = [];
   for (const parameter of parameters) {
@@ -37,7 +44,8 @@ export function deriveKeys(
         applies = false;
         break;
       }
-      pairs.push([dimension, value]);
+      const normalizer = normalize?.[dimension];
+      pairs.push([dimension, normalizer ? normalizer(value) : value]);
     }
     if (!applies) {
       continue;

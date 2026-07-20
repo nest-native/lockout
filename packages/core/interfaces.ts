@@ -21,6 +21,16 @@ export interface Identifiers {
  */
 export type LockoutParameter = ReadonlyArray<string>;
 
+/**
+ * Per-dimension value normalizers, applied to each identity value BEFORE it is
+ * hashed into a key. This is a security control, not a convenience: without it,
+ * `Alice`, `alice`, and `alice ` derive three different counters, so an attacker
+ * bypasses the limit by varying case or whitespace on a case-insensitive login.
+ * Normalize the dimensions your auth treats as equal (e.g. lowercase + trim the
+ * username), and leave the rest (an IP needs no normalization) unlisted.
+ */
+export type Normalize = Readonly<Record<string, (value: string) => string>>;
+
 /** A persisted failure counter for one resolved key. */
 export interface FailureRecord {
   /** Canonical, collision-resistant key derived from (parameter, values). */
@@ -98,6 +108,11 @@ export interface LockoutPolicy {
   tiers?: readonly CooloffTier[];
   /** Which dimension combinations are evaluated; a lock trips if ANY of them does. */
   parameters: readonly LockoutParameter[];
+  /**
+   * Per-dimension value normalizers applied before key derivation — the
+   * defence against case/whitespace lockout bypass. See {@link Normalize}.
+   */
+  normalize?: Normalize;
   /** Identities for which locking is skipped entirely (never counted or locked). */
   whitelist?: (id: Identifiers) => boolean | Promise<boolean>;
   /** Clear a key's failures on a successful login. Defaults to `true`. */

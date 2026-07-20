@@ -42,6 +42,24 @@ describe('LockoutModule.forRoot', () => {
     await moduleRef.close();
   });
 
+  it('threads a core `normalize` option through to the manager', async () => {
+    // The adapter passes options straight to LockoutManager, so a per-dimension
+    // normalizer configured here must collapse case end-to-end.
+    const moduleRef = await Test.createTestingModule({
+      imports: [
+        LockoutModule.forRoot({
+          ...baseOptions(),
+          normalize: { username: (v) => v.toLowerCase() },
+        }),
+      ],
+    }).compile();
+
+    const service = moduleRef.get(LockoutService);
+    assert.equal((await service.reportFailure({ username: 'Bob' })).locked, false);
+    assert.equal((await service.reportFailure({ username: 'bob' })).locked, true);
+    await moduleRef.close();
+  });
+
   it('reset() administratively unlocks even with resetOnSuccess disabled', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [

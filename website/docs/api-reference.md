@@ -40,6 +40,7 @@ title: API Reference
 | `windowMs?` | failure-counting window; defaults to the effective cooloff |
 | `tiers?` | escalating cooloff by failure count, e.g. `[{atFailures: 10, cooloffMs: 3_600_000}]` |
 | `parameters` | dimension combinations to evaluate; a lock trips if **any** trips |
+| `normalize?` | `Record<string, (value) => string>` — per-dimension normalizers applied before hashing (case/whitespace-bypass defence) |
 | `whitelist?` | `(id) => boolean \| Promise<boolean>` — identities never counted or locked |
 | `resetOnSuccess?` | clear failures on success (default `true`) |
 | `failMode?` | `'open'` (default) or `'closed'` |
@@ -98,9 +99,11 @@ proxy headers for you.
   trust. Because a lock trips if **any** parameter trips, a `['username']`
   parameter still catches a single-target brute force even when the IP is
   spoofable. And never `whitelist` on a dimension an attacker can forge.
-- **Normalize identity dimensions.** `Alice` and `alice` (and unicode variants)
-  hash to different counters. If your auth is case-insensitive, lowercase /
-  canonicalize the username before passing it, or the limit is per-spelling.
+- **Normalize identity dimensions.** `Alice`, `alice`, and `alice ` hash to
+  three different counters — on a case-insensitive login an attacker bypasses
+  the limit by varying case or whitespace. Set a per-dimension `normalize` map
+  (e.g. `{ username: (v) => v.trim().toLowerCase() }`); it is applied before
+  hashing on every path (check / record / reset). Or normalize in your extractor.
 - **Bound store growth.** Every distinct identity creates a record. Schedule
   `pruneExpired()` (it drops records past their window, capping the store to
   identities active within `windowMs`), put a rate limiter

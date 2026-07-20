@@ -276,6 +276,54 @@ describe('LockoutManager — configuration validation', () => {
       ]),
     );
   });
+
+  it('rejects a normalize entry that is not a function', () => {
+    assert.throws(
+      () =>
+        new LockoutManager({
+          store,
+          limit: 2,
+          cooloffMs: 1000,
+          parameters: [['username']],
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          normalize: { username: 'nope' as any },
+        }),
+      /normalize\['username'\] must be a function/,
+    );
+  });
+});
+
+describe('LockoutManager — identity normalization', () => {
+  it('counts case/whitespace variants against ONE counter (bypass defence)', async () => {
+    const manager = new LockoutManager({
+      store: new InMemoryLockoutStore(),
+      limit: 3,
+      cooloffMs: 1000,
+      parameters: [['username']],
+      normalize: { username: (v) => v.trim().toLowerCase() },
+    });
+    // Three "different" spellings of the same user must share the counter and
+    // trip the lock — without normalization each spelling would be limit-1.
+    assert.equal((await manager.recordFailure({ username: 'Alice' })).locked, false);
+    assert.equal((await manager.recordFailure({ username: 'ALICE ' })).locked, false);
+    assert.equal((await manager.recordFailure({ username: ' alice' })).locked, true);
+    // And check() sees the lock under any spelling.
+    assert.equal((await manager.check({ username: 'aLiCe' })).locked, true);
+  });
+
+  it('normalizes the reset path too (unlock by any spelling)', async () => {
+    const manager = new LockoutManager({
+      store: new InMemoryLockoutStore(),
+      limit: 2,
+      cooloffMs: 1000,
+      parameters: [['username']],
+      normalize: { username: (v) => v.toLowerCase() },
+    });
+    await manager.recordFailure({ username: 'Bob' });
+    assert.equal((await manager.recordFailure({ username: 'bob' })).locked, true);
+    await manager.reset({ username: 'BOB' }); // different spelling still unlocks
+    assert.equal((await manager.check({ username: 'bob' })).locked, false);
+  });
 });
 
 describe('LockoutManager — multi-key evaluation', () => {
