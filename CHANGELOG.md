@@ -7,7 +7,11 @@ This project follows semantic versioning for the published packages. Sample,
 documentation, and CI-only changes may remain unreleased until the next package
 release is useful for users.
 
-## Unreleased
+## 0.4.0
+
+A feature release: an identity-normalization control (closing a case/whitespace
+lockout bypass), a bulk administrative unlock, and an audit-logging recipe —
+from a feature-by-feature comparison against django-axes.
 
 ### `@authlock/core`
 

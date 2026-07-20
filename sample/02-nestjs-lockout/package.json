@@ -9,7 +9,7 @@
     "test": "npm run typecheck && npm run smoke"
   },
   "dependencies": {
-    "@authlock/core": "0.3.0",
+    "@authlock/core": "0.4.0",
     "@nest-native/lockout": "0.3.1",
     "@nestjs/common": "^11.1.27",
     "@nestjs/core": "^11.1.27",
