@@ -60,6 +60,21 @@ describe('LockoutModule.forRoot', () => {
     await moduleRef.close();
   });
 
+  it('resetAll() clears every counter through the service', async () => {
+    const moduleRef = await Test.createTestingModule({
+      imports: [LockoutModule.forRoot(baseOptions())],
+    }).compile();
+    const service = moduleRef.get(LockoutService);
+    await service.reportFailure({ username: 'a' });
+    await service.reportFailure({ username: 'a' }); // limit 2 → locked
+    await service.reportFailure({ username: 'b' });
+    await service.reportFailure({ username: 'b' });
+    await service.resetAll();
+    assert.equal((await service.check({ username: 'a' })).locked, false);
+    assert.equal((await service.check({ username: 'b' })).locked, false);
+    await moduleRef.close();
+  });
+
   it('reset() administratively unlocks even with resetOnSuccess disabled', async () => {
     const moduleRef = await Test.createTestingModule({
       imports: [

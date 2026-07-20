@@ -63,6 +63,10 @@ export class MysqlLockoutStore implements LockoutStore {
     await this.db.delete(this.table).where(eq(this.table.key, key));
   }
 
+  async clearAll(): Promise<void> {
+    await this.db.delete(this.table);
+  }
+
   async clearExpired(olderThan: number): Promise<number> {
     // mysql2 delete resolves to `[ResultSetHeader, FieldPacket[]]`; the header's
     // `affectedRows` is the number of rows removed.

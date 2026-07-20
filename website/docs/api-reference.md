@@ -11,7 +11,7 @@ title: API Reference
 
 | Export | Kind | Purpose |
 | --- | --- | --- |
-| `LockoutManager` | class | `check()` (read-only pre-auth gate), `recordFailure()`, `recordSuccess()`, `reset()` (administrative unlock), `pruneExpired()`; multi-key evaluation + `onLockout` hook |
+| `LockoutManager` | class | `check()` (read-only pre-auth gate), `recordFailure()`, `recordSuccess()`, `reset()` (unlock one identity), `resetAll()` (unlock everyone), `pruneExpired()`; multi-key evaluation + `onLockout` hook |
 | `InMemoryLockoutStore` | class | single-instance store, ships in the box |
 | `deriveKeys` | function | resolve an identity to its storage keys (sha256 of the dimension/value pairs — raw values never reach a store) |
 | `cooloffFor` / `effectiveWindowMs` / `evaluateRecord` | functions | the pure policy maths, exported for custom stores and tooling |
@@ -71,7 +71,7 @@ no Drizzle at all and stays zero-dependency.
 | --- | --- | --- |
 | `LockoutModule` | dynamic module | `forRoot(options)` / `forRootAsync({useFactory, inject, imports})`; global by default |
 | `LockoutGuard` | `CanActivate` | reject-if-locked, applied **before** authentication — HTTP 429 + `Retry-After` (Express and Fastify responses) |
-| `LockoutService` | provider | `check()` / `reportFailure()` / `reportSuccess()` / `reset()` — the explicit call site for your login handler and admin unlock |
+| `LockoutService` | provider | `check()` / `reportFailure()` / `reportSuccess()` / `reset()` / `resetAll()` — the explicit call site for your login handler and admin unlock |
 | `defaultExtractor` | function | `username` from the body, `ip` from `req.ip`, `userAgent` from the header — deliberately no `X-Forwarded-For` trust |
 | `LOCKOUT_MANAGER` / `LOCKOUT_OPTIONS` | tokens | `Symbol.for` DI tokens (the manager is injectable directly) |
 | `LockoutModuleOptions` | type | everything `LockoutManagerOptions` takes, plus `extractor` and `isGlobal` |
@@ -113,3 +113,13 @@ proxy headers for you.
 - **fail-open vs. availability.** With the default `failMode: 'open'`, a store
   error allows the attempt and logs — so brute-force protection is off while the
   store is down. Use `failMode: 'closed'` to deny during an outage instead.
+- **Bulk unlock (incident response).** `resetAll()` clears every counter — the
+  "unlock everyone" button for a false-positive lockout wave. To unlock a single
+  identity use `reset(id)`; note that with **single-dimension** parameters
+  (`[['username'], ['ip']]`) `reset({ username })` already clears that username's
+  lock across every IP (the `['ip']` parameter is skipped when no IP is given).
+  Unlocking one identity across a **combination** parameter (`[['username',
+  'ip']]`) is not supported — the store is keyed by a one-way hash, so there is
+  no way to enumerate "every IP this username is locked on" without keeping a
+  reverse index of raw dimensions, which would defeat the property that
+  credentials never reach the store. Use `resetAll()` for that case.

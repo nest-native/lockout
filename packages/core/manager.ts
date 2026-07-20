@@ -240,6 +240,22 @@ export class LockoutManager {
     await this.clearKeys(id);
   }
 
+  /**
+   * Administratively clear EVERY lockout counter — the "unlock everyone"
+   * incident-response action (a false-positive lockout wave, a store migration,
+   * a test reset). Additive and blunt: it does nothing unless you call it, so
+   * the default behaviour is unchanged. For unlocking a single identity use
+   * {@link reset}; note that with single-dimension parameters `reset({ email })`
+   * already clears that email's lock across every IP.
+   */
+  async resetAll(): Promise<void> {
+    try {
+      await this.store.clearAll();
+    } catch (error) {
+      this.log(error, 'store.clearAll');
+    }
+  }
+
   private async clearKeys(id: Identifiers): Promise<void> {
     for (const { key } of deriveKeys(id, this.parameters, this.normalize)) {
       try {

@@ -42,6 +42,10 @@ export class InMemoryLockoutStore implements LockoutStore {
     this.records.delete(key);
   }
 
+  clearAll(): void {
+    this.records.clear();
+  }
+
   clearExpired(olderThan: number): number {
     let removed = 0;
     for (const [key, record] of this.records) {

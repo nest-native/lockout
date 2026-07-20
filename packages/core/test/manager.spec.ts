@@ -16,6 +16,9 @@ class ThrowingStore implements LockoutStore {
   clear(_key: string): void {
     throw new Error('clear boom');
   }
+  clearAll(): void {
+    throw new Error('clearAll boom');
+  }
   clearExpired(_olderThan: number): number {
     throw new Error('clearExpired boom');
   }
@@ -183,6 +186,39 @@ describe('LockoutManager — reset (administrative unlock)', () => {
     });
     await manager.reset(alice); // must not throw despite the whitelist + store error
     assert.ok(logged.includes('store.clear'));
+  });
+
+  it('resetAll clears every counter (bulk incident-response unlock)', async () => {
+    const manager = new LockoutManager({
+      store: new InMemoryLockoutStore(),
+      limit: 2,
+      cooloffMs: 1000,
+      parameters: [['username'], ['ip']],
+    });
+    await manager.recordFailure({ username: 'a', ip: '1.1.1.1' });
+    await manager.recordFailure({ username: 'a', ip: '1.1.1.1' }); // locks both keys
+    await manager.recordFailure({ username: 'b', ip: '2.2.2.2' });
+    await manager.recordFailure({ username: 'b', ip: '2.2.2.2' });
+    assert.equal((await manager.check({ username: 'a' })).locked, true);
+
+    await manager.resetAll();
+
+    for (const id of [{ username: 'a' }, { ip: '1.1.1.1' }, { username: 'b' }]) {
+      assert.equal((await manager.check(id)).locked, false);
+    }
+  });
+
+  it('resetAll fails open on a store error (logs, does not throw)', async () => {
+    const logged: string[] = [];
+    const manager = new LockoutManager({
+      store: new ThrowingStore(),
+      limit: 2,
+      cooloffMs: 1000,
+      parameters: [['username']],
+      logger: (_e, ctx) => logged.push(ctx),
+    });
+    await manager.resetAll(); // must not throw
+    assert.ok(logged.includes('store.clearAll'));
   });
 });
 
