@@ -27,4 +27,4 @@ export type {
 //   import { InMemoryLockoutStore } from '@authlock/core';
 
 /** This adapter's version. */
-export const VERSION = '0.3.1';
+export const VERSION = '0.4.0';
