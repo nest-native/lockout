@@ -123,3 +123,59 @@ proxy headers for you.
   no way to enumerate "every IP this username is locked on" without keeping a
   reverse index of raw dimensions, which would defeat the property that
   credentials never reach the store. Use `resetAll()` for that case.
+
+## Audit logging
+
+Some deployments need a record of failed logins and lockouts — for forensics,
+compliance, or alerting. authlock stores only the **counters** it needs for the
+lock decision (hashed keys, no raw identities), so it is not an audit log. But
+you don't need it to be one: an audit trail is built from what you already have.
+
+**Log each attempt at your own call site.** You already call `reportFailure` /
+`reportSuccess` (or the core `recordFailure` / `recordSuccess`) from your login
+handler — that is the natural, complete place to record every attempt, with the
+outcome you already know. There is deliberately **no per-failure hook** in the
+engine: it would only tell you what your handler already knows, one layer
+removed.
+
+```ts
+async login(input: LoginInput, ip: string | undefined) {
+  const identity = { username: input.username, ip };
+  const gate = await this.lockout.check(identity);
+  if (gate.locked) {
+    this.audit.record({ event: 'login.locked', ...identity }); // dimensions only
+    throw new TooManyRequests();
+  }
+  const user = await this.verify(input);
+  if (!user) {
+    await this.lockout.reportFailure(identity);
+    this.audit.record({ event: 'login.failed', ...identity });
+    throw new Unauthorized();
+  }
+  await this.lockout.reportSuccess(identity);
+  this.audit.record({ event: 'login.ok', username: user.username, ip });
+}
+```
+
+**Alert on lock transitions with `onLockout`.** The hook fires once when an
+attempt first trips a key over the limit (and on each tier escalation) — the
+right signal for "an account is now locked" alerting, without logging every
+failure yourself:
+
+```ts
+new LockoutManager({
+  // ...
+  onLockout: (id, decision) =>
+    this.audit.record({ event: 'lockout', ...id, retryAfterMs: decision.retryAfterMs }),
+});
+```
+
+**Surface store failures with `logger`.** It is called `(error, context)`
+whenever a store operation throws — wire it to your logger so a degraded store
+(which, under the default `failMode: 'open'`, silently disables protection) is
+visible.
+
+> **Never log the credential.** Record only the identity **dimensions** used
+> for the lock decision (username, IP, user-agent) and the outcome — never the
+> password or token. The engine already keeps credentials out of the store by
+> hashing; your audit log must uphold the same rule.

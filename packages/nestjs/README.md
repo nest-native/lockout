@@ -122,6 +122,16 @@ async login(input: LoginInput, ip: string | undefined) {
 }
 ```
 
+### Audit logging
+
+authlock stores only hashed counters, not an attempt log. Build an audit trail
+from what you already have: log each attempt at your own `reportFailure` /
+`reportSuccess` call site (there is no per-failure hook by design), alert on lock
+transitions via the `onLockout` option, and surface store failures via `logger`
+— recording only identity **dimensions**, never the credential. See the
+[Audit logging](https://nest-native.dev/lockout/api-reference#audit-logging)
+recipe.
+
 ## Relationship to `@authlock/core`
 
 This package is a thin DI shell. All the lockout logic — failure counting,

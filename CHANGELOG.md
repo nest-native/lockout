@@ -33,6 +33,11 @@ release is useful for users.
 - **Added `LockoutService.resetAll()`** — the adapter pass-through for the bulk
   unlock above.
 
+- Docs: an "Audit logging" recipe — how to build a forensic trail from your own
+  `reportFailure`/`reportSuccess` call site plus the `onLockout` and `logger`
+  hooks (there is no per-failure hook by design), always recording identity
+  dimensions and never the credential.
+
 ## 0.3.1
 
 `@nest-native/lockout` only (`@authlock/core` unchanged at 0.3.0).
