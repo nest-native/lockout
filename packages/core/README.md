@@ -1,6 +1,6 @@
 # @authlock/core
 
-<p align="center">A framework-agnostic, django-axes-style login-lockout engine — persistent failed-attempt tracking, failure limits, tiered cooloff, and a pluggable store. Zero runtime dependencies.</p>
+<p align="center">A framework-agnostic login-lockout engine — persistent failed-attempt tracking, failure limits, tiered cooloff, and a pluggable store. Zero runtime dependencies.</p>
 
 <p align="center">
   <a href="https://www.npmjs.com/package/@authlock/core"><img src="https://img.shields.io/npm/v/@authlock/core.svg" alt="NPM Version" /></a>

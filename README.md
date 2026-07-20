@@ -9,9 +9,9 @@
   <a href="https://nest-native.dev/lockout/"><img src="https://img.shields.io/badge/docs-authlock-0f766e.svg" alt="Documentation" /></a>
 </p>
 
-**authlock** — a django-axes-style login-lockout engine for Node: a
-framework-agnostic core ([`@authlock/core`](packages/core)) with a first-class
-NestJS integration ([`@nest-native/lockout`](packages/nestjs)).
+**authlock** — a login-lockout engine for Node: a framework-agnostic core
+([`@authlock/core`](packages/core)) with a first-class NestJS integration
+([`@nest-native/lockout`](packages/nestjs)).
 
 > [!NOTE]
 > **Published and following semver** — [`@authlock/core`](https://www.npmjs.com/package/@authlock/core)
