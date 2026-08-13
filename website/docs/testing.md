@@ -10,6 +10,10 @@ held to **100% coverage** (branches, functions, lines, statements) and a
 SonarJS cognitive-complexity ceiling of 15 — and the whole suite runs without
 Docker.
 
+That numeric gate covers `@authlock/core` only: the NestJS adapter is a thin DI
+shell, behavior-tested in its own `test:nestjs` lane (guard and module specs)
+rather than held to a coverage percentage.
+
 ## How your own tests can use it
 
 The engine takes an injectable clock (`now`) and ships a single-process
