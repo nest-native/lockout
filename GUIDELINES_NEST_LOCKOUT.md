@@ -157,10 +157,32 @@ because the neutral core is the whole cross-framework story.
 ### 6. Release version synchronization (MANDATORY)
 
 - Two packages ship from this repo: `@authlock/core` (core) and
-  `@nest-native/lockout` (adapter, which depends on the core). When bumping the
-  core version, bump the adapter's `@authlock/core` dependency and every
-  `sample/*/package.json` `@authlock/core` pin to the exact version, run
-  `npm install`, and `npm run release:check`.
+  `@nest-native/lockout` (adapter, which depends on the core). When bumping
+  either version, bump the adapter's `@authlock/core` dependency and **every**
+  `sample/*/package.json` pin of **both** packages to the exact version, run
+  `npm install` (so the lockfile stops resolving a sample to the previously
+  *published* tarball), and `npm run release:check`.
+- **A version-sync check iterates every package — it never hardcodes one
+  name.** `check-sample-version-sync.mjs` derives its name → version map from
+  every non-private `packages/*/package.json` and asserts the declared
+  dependency, the `package-lock.json` entry, and the `npm ls` resolution for
+  each of those packages a sample declares. The earlier single-package form
+  (hardcoded `@authlock/core`, reading only `packages/core/package.json`) let
+  `sample/02-nestjs-lockout` sit on the published `@nest-native/lockout@0.3.1`
+  — dragging a nested `@authlock/core@0.3.0` into the sample tree, so the
+  NestJS dogfood exercised the *previous release* instead of the workspace
+  sources — while the gate stayed green. Any future sync check follows the same
+  rule: enumerate the packages, never name one.
+- **Version literals are release-blocking.** A version string in a README
+  `Status` line, a badge, `CONTRIBUTING`, or a compatibility table ships to
+  users, so a stale one is a release defect; where such a literal exists it is
+  enforced by `release:check:readme-version`, which asserts it against
+  `packages/<pkg>/package.json`. Prefer **dynamic** badges
+  (`img.shields.io/npm/v/<pkg>`) to hardcoded `img.shields.io/badge/version-…`
+  or `badge/status-…` ones. This repo deliberately carries **no** version
+  literal — both package READMEs use the dynamic npm badge — so no
+  readme-version check is wired here; introduce a literal and you must add the
+  check in the same change.
 - Publish via a `vX.Y.Z` tag → `release.yml`, using npm **Trusted Publishing
   (OIDC)** — NO long-lived `NPM_TOKEN`. The workflow's `id-token: write`
   permission lets the npm CLI mint a short-lived, workflow-scoped credential and
