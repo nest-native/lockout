@@ -54,7 +54,7 @@ because the neutral core is the whole cross-framework story.
 - **Identity extraction is the application's trust decision.** The library
   exposes an extractor hook and does **not** trust `X-Forwarded-For` or any
   proxy header by default. A deep proxy matrix is out of scope (see non-goals).
-- Support line: Node `>=20`; the adapter targets NestJS `10.x` / `11.x` /
+- Support line: Node `>=22`; the adapter targets NestJS `10.x` / `11.x` /
   `12.x`; the Drizzle store targets Drizzle `0.44` / `0.45`.
 
 ### 2. Public API
