@@ -28,7 +28,12 @@ bus**, so this adapter *cannot* be. It gives you explicit wiring instead:
   `failMode` (`'open'` by default, `'closed'` for high-security).
 
 All of it builds on stable Nest primitives (`CanActivate`, `DynamicModule`,
-`HttpException`), so the package supports **NestJS 10, 11, and 12**.
+`HttpException`), so the package supports **NestJS 10, 11, and 12** (peer
+range `^10.0.0 || ^11.0.0 || ^12.0.0`). Each major is exercised in CI: 10 and
+11 typecheck the adapter, and 12 — ESM-only — gets the full run of typecheck,
+suites, and samples on an install that provably resolves `@nestjs/*@12`.
+Node.js `>=22`; on NestJS 12 — which this CommonJS package loads through
+Node's `require(esm)`, behind a flag before 22.12.0 — Node.js `>=22.12`.
 
 ## Usage
 

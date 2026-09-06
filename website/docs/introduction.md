@@ -44,7 +44,9 @@ Django. `@authlock/core` brings the same model to TypeScript, and keeps the core
 | [`@nest-native/lockout`](https://www.npmjs.com/package/@nest-native/lockout) | a thin NestJS DI adapter (guard + service + module) |
 
 Use the core directly from Express, inversify, tsyringe, or a bare script; use
-the adapter when you're on NestJS (10, 11, or 12).
+the adapter when you're on NestJS 10, 11, or 12 — see the
+[support policy](./support-policy.md) for the exact ranges and how each major
+is tested.
 
 ## Not a rate limiter
 
