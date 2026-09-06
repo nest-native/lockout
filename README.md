@@ -55,15 +55,24 @@ inversify/tsyringe adapter packages.
 
 | Runtime | Supported line |
 | --- | --- |
-| Node.js | `>=22` |
+| Node.js | `>=22` (`>=22.12` with NestJS 12 — see the note below the table) |
 | NestJS (`@nest-native/lockout` peer) | `^10.0.0 \|\| ^11.0.0 \|\| ^12.0.0` |
 | `drizzle-orm` (`@authlock/core` optional peer) | `^0.44.0 \|\| ^0.45.0` |
 
+The Node.js floor depends on which end of the NestJS range you are on. NestJS
+10 and 11 run on any Node.js `>=22`. NestJS 12 is ESM-only, and this adapter
+is CommonJS, so it (and the NestJS sample) loads 12 through Node's
+`require(esm)`, which is behind a flag before Node.js 22.12.0 — the 12 end of
+the range needs Node.js `>=22.12`. `engines` stays `>=22` because the 10 and
+11 ends do not need more; Node 22.0–22.11 satisfies it and still cannot load
+NestJS 12. CI's NestJS 12 leg runs on a current 22.x.
+
 Each NestJS major in that range is exercised in CI, not just declared: 10 and
 11 typecheck the adapter, and 12 gets the full run (typecheck, both suites,
-samples) on an install that provably resolves `@nestjs/*@12` inside every
-workspace. The devDependencies and the lockfile stay on 11.x on purpose, so
-both ends of the range are tested claims.
+samples) on an install that provably resolves every `@nestjs/*` package it
+installs at 12, from the root `node_modules`, inside every workspace. The
+devDependencies and the lockfile stay on 11.x on purpose, so both ends of the
+range are tested claims.
 
 ## Honest by design: NestJS has no login-failure signal
 
@@ -79,11 +88,12 @@ documented Passport-strategy recipe. The docs lead with this honestly.
 Every change runs the full gate — build, typecheck (both packages), coverage
 with `c8` enforced at **100%** on the core (statements, branches, functions,
 lines), cognitive-complexity enforcement (SonarJS threshold `15`) on the core,
-tarball validation, sample version sync, a supply-chain audit of the published
-surface, the docs build, and the samples — plus, in CI, a NestJS 12
-compatibility leg that installs `@nestjs/*@^12` on top of the 11.x lockfile
-(`--no-save`, every workspace) and re-runs the adapter typecheck, both suites,
-and the samples, so both ends of the adapter's peer range are tested claims:
+tarball validation, sample version sync, compatibility-table sync, a
+supply-chain audit of the published surface, the docs build, and the samples —
+plus, in CI, a NestJS 12 compatibility leg that installs `@nestjs/*@^12` on
+top of the 11.x lockfile (`--no-save`, every workspace) and re-runs the
+adapter typecheck, both suites, and the samples, so both ends of the adapter's
+peer range are tested claims:
 
 ```bash
 npm run ci

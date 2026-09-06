@@ -19,15 +19,22 @@ CI, docs, and Dependabot only — no package change; both packages remain at
   informational 12-alpha canary (typecheck only, `continue-on-error`) is
   replaced by a blocking `nestjs-latest-major` CI leg that installs
   `@nestjs/*@^12` on top of the 11.x lockfile in every workspace (`--no-save`),
-  proves from inside the adapter and each sample that `@nestjs/core` resolved
-  to 12, and runs the adapter typecheck, both suites, and the sample matrix.
+  proves from inside every workspace that each `@nestjs/*` package it
+  installed resolved to 12 from the root `node_modules`, and runs the adapter
+  typecheck, both suites, and the sample matrix.
   Nothing was broken on 12: the adapter has no deep `@nestjs/*` imports
   (NestJS 12 is ESM-only, so a directory import such as
   `@nestjs/common/interfaces` would not resolve) and no lifecycle hooks (12
   reordered them by module level). Dependabot's peer group now includes majors,
   so the next NestJS major arrives as one installable PR rather than one
   `ERESOLVE` per package. Docs gained a support-policy page with the
-  compatibility table and the peer-major recipe.
+  compatibility table and the peer-major recipe. The 12 end of the range
+  needs Node.js `>=22.12`, where `require(esm)` is no longer behind a flag
+  (the adapter is CommonJS and loads the ESM-only 12 through it); `engines`
+  stays `>=22` because the 10 and 11 ends do not need more, and every
+  compatibility table says so. A new `release:check:compat-tables` step pins
+  those tables, the adapter README, and the guidelines' support line to the
+  manifests' `engines` floor and peer ranges.
 
 ## 0.4.0
 

@@ -54,9 +54,9 @@ because the neutral core is the whole cross-framework story.
 - **Identity extraction is the application's trust decision.** The library
   exposes an extractor hook and does **not** trust `X-Forwarded-For` or any
   proxy header by default. A deep proxy matrix is out of scope (see non-goals).
-- Support line: Node `>=22`; the adapter targets NestJS
-  `^10.0.0 || ^11.0.0 || ^12.0.0`; the Drizzle store targets Drizzle `0.44` /
-  `0.45`.
+- Support line: Node `>=22` (`>=22.12` on the NestJS 12 end — see the Node
+  floor rule in §3); the adapter targets NestJS `^10.0.0 || ^11.0.0 || ^12.0.0`;
+  the Drizzle store targets Drizzle `0.44` / `0.45`.
 - **Peer majors are widened, never swapped.** When a peer ships a new major,
   the published `peerDependencies` range widens to include it, the
   devDependency (and therefore the lockfile every default CI job installs)
@@ -109,10 +109,12 @@ because the neutral core is the whole cross-framework story.
   major for real: it installs `@nestjs/*@^12` on top of the 11.x lockfile
   (`npm install --no-save --workspaces --include-workspace-root` — the adapter
   workspace and the NestJS sample declare `@nestjs/*` at `^11` themselves, so
-  a root-only install would leave each of them a nested 11), asserts from
-  inside the adapter and every sample that `@nestjs/core` resolved to 12
-  before running anything, then runs the adapter typecheck, both suites, and
-  the sample matrix. It blocks; it replaced the informational 12-alpha canary
+  a root-only install would leave each of them a nested 11), proves from
+  inside every workspace that each of the four packages it installs
+  (`common`, `core`, `platform-express`, `testing`) resolved to 12 from the
+  root `node_modules` (`scripts/check-nestjs-major.mjs`) before running
+  anything, then runs the adapter typecheck, both suites, and the sample
+  matrix. It blocks; it replaced the informational 12-alpha canary
   once 12 went stable (2026-08-27). The `@nestjs/*` devDependencies stay on
   11.x deliberately (§1), and Dependabot cannot deliver a NestJS major: the
   `@nestjs/*` packages peer on each other, so one-package-per-PR bumps fail
@@ -137,6 +139,18 @@ because the neutral core is the whole cross-framework story.
   install would never notice. Do not reach for
   `@nestjs/common/interfaces/controllers/controller.interface` as a workaround
   — still an internal path, and 12 defines that type as plain `object` anyway.
+- **The Node floor stays `>=22`; NestJS 12 needs `>=22.12` of it.** The adapter
+  compiles to CommonJS, so it loads the ESM-only NestJS 12 through Node's
+  `require(esm)`, which is behind a flag before Node 22.12.0 (and 20.19.0 on
+  the 20 line, below this repo's floor). `engines.node` stays `>=22` because
+  it describes the whole peer range — the 10 and 11 ends run on any Node 22 —
+  but Node 22.0–22.11 satisfies it and still cannot load NestJS 12, so every
+  place that states the floor (the support line in §1, the README and
+  support-policy compatibility tables, the adapter README, the changelog)
+  carries the `>=22.12` qualifier for 12 rather than leaving `>=22` to imply
+  it. Raising `engines` to `>=22.12` would be a floor change for NestJS 10
+  and 11 users and is a separate decision, not part of widening the peer
+  range.
 - **Lifecycle-hook order across providers is not a contract.** NestJS 12
   reordered lifecycle hooks (`onModuleInit`, `onApplicationBootstrap`,
   `onModuleDestroy`, `beforeApplicationShutdown`, `onApplicationShutdown`) by
@@ -228,10 +242,15 @@ because the neutral core is the whole cross-framework story.
   enforced by `release:check:readme-version`, which asserts it against
   `packages/<pkg>/package.json`. Prefer **dynamic** badges
   (`img.shields.io/npm/v/<pkg>`) to hardcoded `img.shields.io/badge/version-…`
-  or `badge/status-…` ones. This repo deliberately carries **no** version
-  literal — both package READMEs use the dynamic npm badge — so no
-  readme-version check is wired here; introduce a literal and you must add the
-  check in the same change.
+  or `badge/status-…` ones. This repo carries **no** package-version literal
+  — both package READMEs use the dynamic npm badge — so no readme-version
+  check is wired here; introduce one and you must add the check in the same
+  change. The compatibility tables (root README, support policy), the adapter
+  README, and the support line in §1 do state the Node floor and the peer
+  ranges as literals, and `release:check:compat-tables`
+  (`scripts/check-compat-tables.mjs`) pins every one of them to `engines.node`
+  and the `@nestjs/*` / `drizzle-orm` peer ranges in the manifests, so a floor
+  or range change that misses a page fails `release:check`.
 - Publish via a `vX.Y.Z` tag → `release.yml`, using npm **Trusted Publishing
   (OIDC)** — NO long-lived `NPM_TOKEN`. The workflow's `id-token: write`
   permission lets the npm CLI mint a short-lived, workflow-scoped credential and

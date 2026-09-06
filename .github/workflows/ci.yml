@@ -44,16 +44,20 @@ jobs:
       - name: Typecheck adapter
         run: npm run typecheck --workspace @nest-native/lockout
 
-  package-test-node-20:
-    name: Package tests/coverage (Node 20)
+  package-test-node-24:
+    name: Package tests/coverage (Node 24)
     runs-on: ubuntu-latest
-    # No external DB services: the core suite is fully hermetic (in-memory
-    # store), and the gated Drizzle-store round-trips live in store-integration.
+    # The second Node line. package-quality runs both suites (plus the
+    # complexity gate and the PR reports) on the floor, 22; this job runs the
+    # same suites on 24 so Node 24 is a tested claim for the tests too, not
+    # only for package-build. No external DB services: the core suite is fully
+    # hermetic (in-memory store), and the gated Drizzle-store round-trips live
+    # in store-integration.
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version: '24'
 
       - name: Install dependencies
         run: npm ci
@@ -331,22 +335,15 @@ jobs:
             @nestjs/platform-express@^12.0.0 \
             @nestjs/testing@^12.0.0
 
-      - name: Prove the adapter and every sample resolve NestJS 12
-        # NestJS 12 does not export ./package.json, so the version is read next
-        # to the resolved entry point, from inside each workspace directory. A
-        # nested 11 under a workspace fails here instead of passing silently.
-        run: |
-          for dir in packages/nestjs sample/*/; do
-            (
-              cd "$dir" && node -e "
-                const path = require('node:path');
-                const root = path.dirname(require.resolve('@nestjs/core'));
-                const { version } = require(path.join(root, 'package.json'));
-                console.log(process.cwd(), '@nestjs/core', version, '<-', root);
-                if (!version.startsWith('12.')) process.exit(1);
-              "
-            )
-          done
+      - name: Prove every workspace resolves NestJS 12 from the root node_modules
+        # Every package the step above installs (common, core, platform-express,
+        # testing) is resolved from inside every workspace — the root, both
+        # packages, every sample — and must be 12.x served from the root
+        # node_modules. A nested 11 under the adapter or a sample fails here
+        # instead of passing silently. NestJS 12 does not export ./package.json,
+        # so the script walks up from each resolved entry point to the manifest
+        # that owns it.
+        run: node scripts/check-nestjs-major.mjs 12
 
       - name: Build core (@authlock/core)
         run: npm run build --workspace @authlock/core
