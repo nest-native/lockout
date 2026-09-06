@@ -277,7 +277,8 @@ jobs:
     runs-on: ubuntu-latest
     # The adapter builds only on stable Nest primitives (CanActivate,
     # DynamicModule, HttpException), so it must typecheck against every
-    # supported major. Becomes fully meaningful once LockoutGuard/Module land.
+    # supported major. 10 and 11 are the older end of the range; the newest
+    # major gets the full run (typecheck, suites, samples) in nestjs-latest-major.
     strategy:
       fail-fast: false
       matrix:
@@ -300,12 +301,19 @@ jobs:
       - name: Typecheck adapter against NestJS ${{ matrix.nest-major }}
         run: npm run typecheck --workspace @nest-native/lockout
 
-  nestjs-canary:
-    name: NestJS 12-alpha canary (informational)
+  nestjs-latest-major:
+    name: NestJS 12 compatibility (Node 22)
     runs-on: ubuntu-latest
-    # Gated, informational: tracks the next NestJS major before it is stable.
-    # continue-on-error so a breaking pre-release never blocks a merge.
-    continue-on-error: true
+    # The adapter's published peer range is ^10 || ^11 || ^12, but the
+    # devDependencies and the lockfile every other job installs stay on 11.x so
+    # the default suite keeps testing the older end. This leg installs 12 on
+    # top of that lockfile with --no-save and runs the adapter typecheck, both
+    # suites, and the sample matrix, which makes the 12 end of the range a
+    # tested claim rather than an assumption. --workspaces matters: the adapter
+    # workspace and the NestJS sample declare @nestjs/* at ^11 themselves, so a
+    # root-only install would leave each of them a nested 11 while the root
+    # moved to 12. It replaced the informational 12-alpha canary once 12 went
+    # stable (2026-08-27), and unlike the canary it blocks.
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -315,14 +323,48 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Pin NestJS to the 12 pre-release line
-        run: npm install --no-save --workspace @nest-native/lockout "@nestjs/common@12 || @nestjs/common@^12.0.0-0" "@nestjs/core@12 || @nestjs/core@^12.0.0-0"
+      - name: Install NestJS 12 (this job only, never saved)
+        run: |
+          npm install --no-save --workspaces --include-workspace-root \
+            @nestjs/common@^12.0.0 \
+            @nestjs/core@^12.0.0 \
+            @nestjs/platform-express@^12.0.0 \
+            @nestjs/testing@^12.0.0
+
+      - name: Prove the adapter and every sample resolve NestJS 12
+        # NestJS 12 does not export ./package.json, so the version is read next
+        # to the resolved entry point, from inside each workspace directory. A
+        # nested 11 under a workspace fails here instead of passing silently.
+        run: |
+          for dir in packages/nestjs sample/*/; do
+            (
+              cd "$dir" && node -e "
+                const path = require('node:path');
+                const root = path.dirname(require.resolve('@nestjs/core'));
+                const { version } = require(path.join(root, 'package.json'));
+                console.log(process.cwd(), '@nestjs/core', version, '<-', root);
+                if (!version.startsWith('12.')) process.exit(1);
+              "
+            )
+          done
 
       - name: Build core (@authlock/core)
         run: npm run build --workspace @authlock/core
 
-      - name: Typecheck adapter against NestJS 12-alpha
+      - name: Typecheck adapter against NestJS 12
         run: npm run typecheck --workspace @nest-native/lockout
+
+      - name: Run core tests against NestJS 12
+        run: npm test
+
+      - name: Run adapter tests against NestJS 12
+        run: npm run test:nestjs
+
+      - name: Build adapter (@nest-native/lockout)
+        run: npm run build --workspace @nest-native/lockout
+
+      - name: Run sample matrix against NestJS 12
+        run: npm run ci:sample
 
   release-and-security:
     name: Release and security checks
