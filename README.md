@@ -51,6 +51,20 @@ engine **framework-agnostic** so it is not tied to any one web framework.
 The neutral core **is** the cross-framework story — there are no bespoke
 inversify/tsyringe adapter packages.
 
+## Compatibility
+
+| Runtime | Supported line |
+| --- | --- |
+| Node.js | `>=22` |
+| NestJS (`@nest-native/lockout` peer) | `^10.0.0 \|\| ^11.0.0 \|\| ^12.0.0` |
+| `drizzle-orm` (`@authlock/core` optional peer) | `^0.44.0 \|\| ^0.45.0` |
+
+Each NestJS major in that range is exercised in CI, not just declared: 10 and
+11 typecheck the adapter, and 12 gets the full run (typecheck, both suites,
+samples) on an install that provably resolves `@nestjs/*@12` inside every
+workspace. The devDependencies and the lockfile stay on 11.x on purpose, so
+both ends of the range are tested claims.
+
 ## Honest by design: NestJS has no login-failure signal
 
 `django-axes` hooks Django's ambient `user_login_failed` signal, so it is
@@ -66,7 +80,10 @@ Every change runs the full gate — build, typecheck (both packages), coverage
 with `c8` enforced at **100%** on the core (statements, branches, functions,
 lines), cognitive-complexity enforcement (SonarJS threshold `15`) on the core,
 tarball validation, sample version sync, a supply-chain audit of the published
-surface, the docs build, and the samples:
+surface, the docs build, and the samples — plus, in CI, a NestJS 12
+compatibility leg that installs `@nestjs/*@^12` on top of the 11.x lockfile
+(`--no-save`, every workspace) and re-runs the adapter typecheck, both suites,
+and the samples, so both ends of the adapter's peer range are tested claims:
 
 ```bash
 npm run ci

@@ -80,7 +80,8 @@ no Drizzle at all and stays zero-dependency.
 
 The adapter builds only on stable Nest primitives (`CanActivate`,
 `DynamicModule`, `HttpException`, `ExecutionContext`) and supports NestJS
-**10, 11, and 12**.
+**10, 11, and 12** (peer range `^10.0.0 || ^11.0.0 || ^12.0.0`; see the
+[support policy](./support-policy.md)).
 
 :::tip Identity extraction is your trust decision
 The default extractor reads `req.ip` — the connection address. Behind a proxy,

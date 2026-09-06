@@ -13,6 +13,7 @@ const sidebars: SidebarsConfig = {
     'api-reference',
     'testing',
     'samples',
+    'support-policy',
   ],
 };
 

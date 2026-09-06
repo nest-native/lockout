@@ -54,8 +54,17 @@ because the neutral core is the whole cross-framework story.
 - **Identity extraction is the application's trust decision.** The library
   exposes an extractor hook and does **not** trust `X-Forwarded-For` or any
   proxy header by default. A deep proxy matrix is out of scope (see non-goals).
-- Support line: Node `>=22`; the adapter targets NestJS `10.x` / `11.x` /
-  `12.x`; the Drizzle store targets Drizzle `0.44` / `0.45`.
+- Support line: Node `>=22`; the adapter targets NestJS
+  `^10.0.0 || ^11.0.0 || ^12.0.0`; the Drizzle store targets Drizzle `0.44` /
+  `0.45`.
+- **Peer majors are widened, never swapped.** When a peer ships a new major,
+  the published `peerDependencies` range widens to include it, the
+  devDependency (and therefore the lockfile every default CI job installs)
+  stays on the older major so the default suite keeps testing that end, and a
+  dedicated CI leg installs the newer major with `--no-save` and runs the
+  suites and the samples. Both ends of the range are then tested claims. A
+  Dependabot PR that moves the devDependency to the new major is not how a
+  major gets adopted — see the version-compatibility rule in §3.
 
 ### 2. Public API
 
@@ -96,8 +105,48 @@ because the neutral core is the whole cross-framework story.
 - **Version compatibility:** the adapter builds ONLY on stable Nest primitives
   (`CanActivate`, `DynamicModule`, `HttpException`) so the same code runs on
   NestJS 10, 11, and 12. A CI matrix typechecks the adapter against 10 and 11
-  (backward-compat lane), and a **gated, informational** NestJS-12 pre-release
-  canary job (`continue-on-error`) tracks the next major without blocking merges.
+  (backward-compat lane), and the `nestjs-latest-major` leg runs the newest
+  major for real: it installs `@nestjs/*@^12` on top of the 11.x lockfile
+  (`npm install --no-save --workspaces --include-workspace-root` — the adapter
+  workspace and the NestJS sample declare `@nestjs/*` at `^11` themselves, so
+  a root-only install would leave each of them a nested 11), asserts from
+  inside the adapter and every sample that `@nestjs/core` resolved to 12
+  before running anything, then runs the adapter typecheck, both suites, and
+  the sample matrix. It blocks; it replaced the informational 12-alpha canary
+  once 12 went stable (2026-08-27). The `@nestjs/*` devDependencies stay on
+  11.x deliberately (§1), and Dependabot cannot deliver a NestJS major: the
+  `@nestjs/*` packages peer on each other, so one-package-per-PR bumps fail
+  `npm ci` with ERESOLVE before a single test runs (NestJS 12 opened fifteen
+  such PRs across the org). The peer group in `.github/dependabot.yml`
+  therefore groups majors too, so the next major arrives as one PR whose
+  result carries information — input to the peer-widening recipe, not a
+  replacement for it.
+- **NestJS 12 is ESM-only: never import a directory index from `@nestjs/*`.**
+  `@nestjs/common` and `@nestjs/core` 12 ship an exports map of
+  `{".", "./internal", "./*.js", "./*": "./*.js"}`. A deep import that names a
+  *file* (`@nestjs/core/injector/constants`) still resolves under it; one that
+  names a *directory* (`@nestjs/common/interfaces`) does not, because there is
+  no `<dir>.js` and ESM never completes a directory to its `index`. That one
+  import was the whole NestJS 12 failure in `@nest-native/kafka` and
+  `@nest-native/trpc`. This adapter has **no** deep imports at all — every
+  import comes from the `@nestjs/common` / `@nestjs/core` roots — and that is
+  the intended state: the stable-primitives rule above already forbids
+  reaching into internals. If a deep import ever becomes unavoidable it must
+  name a file, and the `nestjs-latest-major` leg is the enforcement here: a
+  directory import fails its typecheck and suites on 12, which the 11.x
+  install would never notice. Do not reach for
+  `@nestjs/common/interfaces/controllers/controller.interface` as a workaround
+  — still an internal path, and 12 defines that type as plain `object` anyway.
+- **Lifecycle-hook order across providers is not a contract.** NestJS 12
+  reordered lifecycle hooks (`onModuleInit`, `onApplicationBootstrap`,
+  `onModuleDestroy`, `beforeApplicationShutdown`, `onApplicationShutdown`) by
+  the component's level in the module hierarchy, so the order in which two
+  providers see the *same* hook differs between 11 and 12; the phase order is
+  unchanged. This adapter implements no lifecycle hook today (the guard and
+  the service are stateless over the injected `LockoutManager`). Should one
+  land, it may rely on the phase order only — never on where another
+  provider's same-phase hook falls — and no test may assert a within-phase
+  order.
 - Keep the lock decision a single code path: gather every configured key, ask
   the store for each count, and lock if any exceeds the limit within its window
   — one function, easy to reason about and to mutation-test.

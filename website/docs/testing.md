@@ -58,3 +58,10 @@ clock = 60_000; // the cooloff has elapsed — no sleeping in tests
   `LOCKOUT_MYSQL_URL` set (CI provisions services; locally
   `npm run infra:up && npm run test:full`), the same store contract runs
   against live Postgres and MySQL.
+- **Both ends of the NestJS peer range.** The default install and lockfile
+  stay on NestJS 11. A dedicated CI leg installs `@nestjs/*@^12` on top of that
+  lockfile (`--no-save`, in every workspace), proves from inside the adapter
+  and each sample that `@nestjs/core` resolved to 12, then re-runs the adapter
+  typecheck, both suites, and the samples; a 10/11 matrix typechecks the
+  adapter for backward compatibility. Supporting a major means testing it, not
+  declaring it — see the [support policy](./support-policy.md).

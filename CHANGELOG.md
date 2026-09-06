@@ -7,6 +7,28 @@ This project follows semantic versioning for the published packages. Sample,
 documentation, and CI-only changes may remain unreleased until the next package
 release is useful for users.
 
+## Unreleased
+
+CI, docs, and Dependabot only — no package change; both packages remain at
+0.4.0.
+
+- **NestJS 12 support is now a tested claim, not a declared one.** The adapter
+  already published `@nestjs/common` / `@nestjs/core` peers of
+  `^10.0.0 || ^11.0.0 || ^12.0.0`, so nothing changes for consumers, and the
+  devDependencies and the lockfile stay on 11.x. What changed: the
+  informational 12-alpha canary (typecheck only, `continue-on-error`) is
+  replaced by a blocking `nestjs-latest-major` CI leg that installs
+  `@nestjs/*@^12` on top of the 11.x lockfile in every workspace (`--no-save`),
+  proves from inside the adapter and each sample that `@nestjs/core` resolved
+  to 12, and runs the adapter typecheck, both suites, and the sample matrix.
+  Nothing was broken on 12: the adapter has no deep `@nestjs/*` imports
+  (NestJS 12 is ESM-only, so a directory import such as
+  `@nestjs/common/interfaces` would not resolve) and no lifecycle hooks (12
+  reordered them by module level). Dependabot's peer group now includes majors,
+  so the next NestJS major arrives as one installable PR rather than one
+  `ERESOLVE` per package. Docs gained a support-policy page with the
+  compatibility table and the peer-major recipe.
+
 ## 0.4.0
 
 A feature release: an identity-normalization control (closing a case/whitespace
