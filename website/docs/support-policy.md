@@ -32,15 +32,23 @@ A new peer major is **widened into the range, never swapped in**:
 2. the devDependencies — and therefore the lockfile every default CI job
    installs — stay on the older major, so the default suite keeps testing that
    end;
-3. a dedicated CI leg installs the newer major with `--no-save` on top of that
-   lockfile and runs the suites and the samples.
+3. the `nestjs-compat` CI matrix gets an entry for the new end: each entry
+   installs one end of the range with `--no-save` on top of that lockfile,
+   proves every workspace resolves exactly it, and runs the adapter typecheck,
+   the suites, and the samples.
 
-Both ends of the range are then tested claims. NestJS 12 (released
-2026-08-27; ESM-only) is the live example: the `nestjs-latest-major` job
-installs `@nestjs/*@^12` in every workspace, proves from inside every
-workspace that each package it installed resolved to 12 from the root
-`node_modules`, and re-runs the adapter typecheck, both test suites, and the
-samples. A 10/11 matrix typechecks the adapter at the older end.
+Every end of the range is then a tested claim. The published range is
+`^10.0.0 || ^11.0.0 || ^12.0.0`; the oldest installable graphs we run are
+`10.3.2` and `11.0.0`, pinned exactly. 10.3.2 rather than 10.0.0 because
+`@nestjs/common` 10.0.0–10.3.1 peer on `reflect-metadata ^0.1.12` while this
+repo (like any consumer on reflect-metadata 0.2) pins `^0.2.2`, so 10.3.2 is
+the oldest 10 that installs at all; nothing the adapter uses was added by a
+later 10.x or 11.x. The `12` entry floats on `^12.0.0`. NestJS 12 (released
+2026-08-27; ESM-only) is the live example of step 3: the leg installs
+`@nestjs/*@^12` in every workspace, proves from inside every workspace that
+each package resolved to 12 from the root `node_modules` with every
+NestJS-ecosystem peer range satisfied, and re-runs the adapter typecheck, both
+test suites, and the samples.
 
 ## What NestJS 12 changed, and what it means here
 
