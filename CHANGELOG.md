@@ -22,6 +22,18 @@ CI, docs, and Dependabot only — no package change; both packages remain at
   proves from inside every workspace that each `@nestjs/*` package it
   installed resolved to 12 from the root `node_modules`, and runs the adapter
   typecheck, both suites, and the sample matrix.
+- **Every end of the peer range is now a CI leg, with the floors pinned and
+  explained.** The `nestjs-latest-major` leg above and the typecheck-only
+  10/11 matrix (whose `^10` floated and whose `11` entry was the lockfile
+  again) are replaced by one `nestjs-compat` matrix: `10 floor` pinned
+  exactly to `10.3.2` (the first 10.x whose `reflect-metadata` peer admits
+  the `^0.2` this repo pins), `11 floor` pinned exactly to `11.0.0`, and `12`
+  on `^12.0.0`, each running the adapter typecheck, both suites, and the
+  sample matrix. `scripts/check-nestjs-resolution.mjs` (replacing
+  `check-nestjs-major.mjs`) proves the exact version from inside every
+  workspace and checks every peer range in the NestJS ecosystem against the
+  final tree; it also runs against the lockfile in `release:check`. No
+  published range changed.
   Nothing was broken on 12: the adapter has no deep `@nestjs/*` imports
   (NestJS 12 is ESM-only, so a directory import such as
   `@nestjs/common/interfaces` would not resolve) and no lifecycle hooks (12

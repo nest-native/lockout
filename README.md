@@ -90,10 +90,12 @@ with `c8` enforced at **100%** on the core (statements, branches, functions,
 lines), cognitive-complexity enforcement (SonarJS threshold `15`) on the core,
 tarball validation, sample version sync, compatibility-table sync, a
 supply-chain audit of the published surface, the docs build, and the samples —
-plus, in CI, a NestJS 12 compatibility leg that installs `@nestjs/*@^12` on
-top of the 11.x lockfile (`--no-save`, every workspace) and re-runs the
-adapter typecheck, both suites, and the samples, so both ends of the adapter's
-peer range are tested claims:
+plus, in CI, a NestJS compatibility matrix that installs every end of the
+adapter's peer range on top of the 11.x lockfile (`--no-save`, every
+workspace) — `10.3.2` and `11.0.0` pinned exactly, with the reasons next to the
+pins, and `^12` — proves every workspace resolves exactly that and every peer
+range in the NestJS ecosystem is satisfied, and re-runs the adapter typecheck,
+both suites, and the samples, so every end of the range is a tested claim:
 
 ```bash
 npm run ci
