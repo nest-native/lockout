@@ -211,7 +211,7 @@ because the neutral core is the whole cross-framework story.
 ### 4. Non-negotiable style
 
 - 100% test coverage (branches/functions/lines/statements) on the **core**
-  package (`packages/core`); SonarJS cognitive complexity ≤ 15 per
+  package (`packages/core`); cognitive complexity ≤ 15 (Biome, `biome.json`) per
   function on the core.
 - The **adapter** (`packages/nestjs`) is a thin DI shell and is **not** held to
   100% — it has its own `test:nestjs` lane and is tested pragmatically (like a

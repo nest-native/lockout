@@ -87,7 +87,7 @@ documented Passport-strategy recipe. The docs lead with this honestly.
 
 Every change runs the full gate — build, typecheck (both packages), coverage
 with `c8` enforced at **100%** on the core (statements, branches, functions,
-lines), cognitive-complexity enforcement (SonarJS threshold `15`) on the core,
+lines), cognitive-complexity enforcement (Biome, threshold `15`) on the core,
 tarball validation, sample version sync, compatibility-table sync, a
 supply-chain audit of the published surface, the docs build, and the samples —
 plus, in CI, a NestJS compatibility matrix that installs every end of the
