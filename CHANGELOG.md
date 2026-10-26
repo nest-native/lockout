@@ -9,6 +9,14 @@ release is useful for users.
 
 ## Unreleased
 
+- **Dependency advisories published on 2026-10-25, published package
+  unchanged.** The dev tree takes `body-parser` 2.4.0, `fast-uri` 3.1.9 and
+  `zod` 4.6.7 within their ranges, and the `multer` override moves to `^2.5.0`.
+  In `website/`: `body-parser` 1.20.9, `fast-uri` 3.1.9 and `launch-editor`
+  2.14.2 within their ranges, and the `serialize-javascript` override moves to
+  7.1.4, which also clears the low-severity Docusaurus chain reported through
+  it. Both trees now audit clean.
+
 - **Dependency advisories, published package unchanged.** The dev tree takes
   `proxy-addr` 2.0.8 (GHSA-jqcg-44mw-7w3h, critical, through Express). In
   `website/`: `shell-quote` 1.12, `compression` 1.8.2, `source-map-js` 1.2.2 and
