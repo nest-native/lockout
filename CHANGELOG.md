@@ -9,6 +9,14 @@ release is useful for users.
 
 ## Unreleased
 
+- **Dependency advisories, published package unchanged.** The `qs` override in
+  the dev tree moves to `^6.16.1` and resolves 6.17.1. In `website/`: `qs`
+  6.16.2, `joi` 17.13.9 and `follow-redirects` 1.16.2 within their ranges.
+  Still open: `minimatch` in the dev tree, fixed only in the new minimatch 11
+  major its parents do not admit yet; the `minimatch` 3.1.5 that
+  `serve-handler` pins in `website/`, which does not contain the affected code;
+  and `deepmerge` under `@svgr`, which has no fixed version.
+
 - **Dependency advisories published on 2026-10-25, published package
   unchanged.** The dev tree takes `body-parser` 2.4.0, `fast-uri` 3.1.9 and
   `zod` 4.6.7 within their ranges, and the `multer` override moves to `^2.5.0`.
