@@ -270,7 +270,17 @@ because the neutral core is the whole cross-framework story.
   except webpack's runtime chunk are byte-identical, and with
   `future.faster.ssgWorkerThreads` switched on (it is off here, so Docusaurus
   never loads `tinypool`) the site builds through a `tinypool` 2 worker pool.
-  Drop both overrides once Docusaurus moves to those majors.
+  Drop both overrides once Docusaurus moves to those majors. The root
+  `package.json` overrides `glob` to `^14.0.3` and `minimatch` to `^11.0.1`
+  (GHSA-3g3m-2fjr-6pw4, GHSA-g3hv-75wg-m249) the same way: c8 12's
+  `test-exclude` 8 still asks for `glob` ^13 and `minimatch` ^10, and
+  Stryker 10 for `minimatch` ~10.2.4. Keep the two rules together: `glob`
+  loads a bundle with its own `minimatch` inlined, so a `minimatch` rule alone
+  closes the alert while glob 13 keeps matching with minimatch 10 code. For
+  the same reason the `glob` floor is 14.0.3, not the advisory's 14.0.2:
+  14.0.2 bundles a `minimatch` from before 11.0.1. Proven on `test:cov` (same
+  files and totals) and a Stryker dry run (same file lists). Drop both once
+  those parents accept the fixed majors.
 
 - **Strictness scope.** The non-negotiables (100% coverage, complexity ≤ 15,
   zero published runtime deps, isolated major-version review) govern the *core*
