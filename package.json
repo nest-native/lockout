@@ -76,7 +76,9 @@
     "esbuild": "^0.28.1",
     "ws": "^8.21.0",
     "qs": "^6.16.1",
-    "multer": "^2.5.0"
+    "multer": "^2.5.0",
+    "glob": "^14.0.3",
+    "minimatch": "^11.0.1"
   },
   "packageManager": "npm@11.21.1"
 }
