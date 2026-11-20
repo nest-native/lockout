@@ -336,6 +336,12 @@ because the neutral core is the whole cross-framework story.
   trusted publisher) to bootstrap. The workflow publishes the core first, then
   the adapter. If independent per-package cadence is adopted later, split into
   tag-prefixed workflows.
+- **The release workflow checks what it published.** Once the registry serves
+  both new versions, `release.yml` runs `npm run release:check:published`. The
+  published check and the packed one (`release:check:consumer`) run the same
+  consumer smoke, from `scripts/consumer-smoke.mjs`, so the check that runs
+  only after a release cannot drift from the one CI runs on every pull
+  request. Change the smoke there, never in either check script.
 - **Governance transition:** during the initial dogfood the repo is local-first
   (direct commits to `main`, no branch protection). After the first `v0.1.0`
   dogfood release, switch `main` to branch-protection + PR-only, matching the
