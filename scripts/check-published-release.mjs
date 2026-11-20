@@ -4,9 +4,9 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { runConsumerSmoke } from './consumer-smoke.mjs';
 
 const npmExecutable = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const nodeExecutable = process.execPath;
 const repoRoot = process.cwd();
 const packagePath = path.join(repoRoot, 'packages/core/package.json');
 const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
@@ -38,7 +38,11 @@ function verifyRegistryVersion() {
       env: npmEnv(),
     },
   );
-  const registryInfo = JSON.parse(rawOutput);
+  const registryView = JSON.parse(rawOutput);
+  // npm 12 prints the fields inside an array; npm 10 and 11 print them bare.
+  const registryInfo = Array.isArray(registryView)
+    ? registryView[0]
+    : registryView;
 
   if (registryInfo.version !== version) {
     throw new Error(
@@ -69,7 +73,11 @@ function packPublishedArtifact() {
       env: npmEnv(),
     },
   );
-  const [packResult] = JSON.parse(rawOutput);
+  const packOutput = JSON.parse(rawOutput);
+  // npm 12 keys the payload by package name; npm 10 and 11 print an array.
+  const packResult = Array.isArray(packOutput)
+    ? packOutput[0]
+    : packOutput[packageName];
 
   if (!packResult?.filename || !Array.isArray(packResult.files)) {
     throw new Error('npm pack did not return the expected published artifact payload.');
@@ -90,71 +98,15 @@ function packPublishedArtifact() {
 function runPublishedConsumerSmoke() {
   const consumerRoot = path.join(tempRoot, 'consumer');
   fs.mkdirSync(consumerRoot);
-  writeConsumerPackage(consumerRoot);
-  writeConsumerSmoke(consumerRoot);
-
-  execFileSync(
-    npmExecutable,
-    [
-      'install',
-      '--package-lock=false',
-      '--no-audit',
-      '--fund=false',
-      '--ignore-scripts',
-    ],
-    {
-      cwd: consumerRoot,
-      stdio: 'inherit',
-      env: npmEnv(),
-    },
-  );
-  execFileSync(nodeExecutable, ['smoke.cjs'], {
-    cwd: consumerRoot,
-    stdio: 'inherit',
+  runConsumerSmoke({
+    consumerRoot,
+    consumerName: 'authlock-core-published-consumer',
+    packageName,
+    packageSpec: version,
+    env: npmEnv(),
   });
 
   console.log('Published consumer validation OK.');
-}
-
-function writeConsumerPackage(consumerRoot) {
-  fs.writeFileSync(
-    path.join(consumerRoot, 'package.json'),
-    `${JSON.stringify(
-      {
-        name: 'authlock-core-published-consumer',
-        private: true,
-        type: 'commonjs',
-        dependencies: {
-          [packageName]: version,
-        },
-      },
-      null,
-      2,
-    )}\n`,
-  );
-}
-
-function writeConsumerSmoke(consumerRoot) {
-  fs.writeFileSync(
-    path.join(consumerRoot, 'smoke.cjs'),
-    `'use strict';
-
-const assert = require('node:assert/strict');
-const core = require('${packageName}');
-const packageJson = require('${packageName}/package.json');
-
-// The documented public surface resolves from the registry install.
-assert.equal(typeof core.VERSION, 'string', 'missing core export: VERSION');
-assert.equal(core.VERSION, packageJson.version, 'VERSION must match package.json');
-
-// The published package declares zero runtime dependencies.
-assert.equal(
-  Object.keys(packageJson.dependencies ?? {}).length,
-  0,
-  'The published package must not declare runtime dependencies.',
-);
-`,
-  );
 }
 
 function runPublishedSampleSmoke() {

@@ -69,3 +69,25 @@ jobs:
           else
             npm publish --workspace @nest-native/lockout --provenance --access public
           fi
+
+      # The registry can take a few minutes to serve a new version, and the
+      # published check installs both packages from there: the core directly,
+      # the adapter through the samples' pins. Wait for both first.
+      - name: Check the published release
+        run: |
+          CORE_VERSION="$(node -p "require('./packages/core/package.json').version")"
+          ADAPTER_VERSION="$(node -p "require('./packages/nestjs/package.json').version")"
+          DEADLINE=$((SECONDS + 600))
+          wait_for_registry() {
+            until [ "$(npm view "$1@$2" version 2>/dev/null)" = "$2" ]; do
+              if [ "${SECONDS}" -ge "${DEADLINE}" ]; then
+                echo "::error::$1@$2 was still not on the registry 10 minutes after publishing, so the published check did not run."
+                exit 1
+              fi
+              echo "Waiting for the registry to serve $1@$2..."
+              sleep 15
+            done
+          }
+          wait_for_registry @authlock/core "${CORE_VERSION}"
+          wait_for_registry @nest-native/lockout "${ADAPTER_VERSION}"
+          npm run release:check:published
